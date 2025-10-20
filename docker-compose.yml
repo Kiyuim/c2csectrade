@@ -1,0 +1,90 @@
+services:
+  mysql-db:
+    image: mysql:8.0
+    container_name: c2c_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: Qsycl741
+      MYSQL_DATABASE: trade
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data_v2:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - c2c-network
+
+  redis-cache:
+    image: redis:7-alpine
+    container_name: c2c_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - c2c-network
+
+  minio:
+    image: minio/minio
+    container_name: mall-minio
+    volumes:
+      - ./minio/data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - c2c-network
+
+  springboot-app:
+    build:
+      context: .
+      args:
+        - JDK_VERSION=${JDK_VERSION:-17}
+    container_name: c2c_springboot
+    restart: always
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mysql-db
+      - redis-cache
+      - minio
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - MYSQL_HOST=mysql-db
+      - MYSQL_PORT=3306
+      - REDIS_HOST=redis-cache
+      - REDIS_PORT=6379
+      - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=Qsycl741
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-db:3306/trade?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    networks:
+      - c2c-network
+
+  frontend:
+    build: ./frontend
+    container_name: c2c_frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - springboot-app
+    networks:
+      - c2c-network
+
+networks:
+  c2c-network:
+    driver: bridge
+
+volumes:
+  mysql_data_v2:

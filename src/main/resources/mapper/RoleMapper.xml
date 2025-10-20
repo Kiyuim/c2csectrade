@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="lut.cn.c2cplatform.mapper.RoleMapper">
+    <resultMap id="RoleResultMap" type="lut.cn.c2cplatform.entity.Role">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+    </resultMap>
+    <select id="selectById" resultMap="RoleResultMap">
+        SELECT * FROM roles WHERE id = #{id}
+    </select>
+    <select id="selectByName" resultMap="RoleResultMap">
+        SELECT * FROM roles WHERE name = #{name}
+    </select>
+    <select id="selectAll" resultMap="RoleResultMap">
+        SELECT * FROM roles
+    </select>
+    <insert id="insert" parameterType="lut.cn.c2cplatform.entity.Role">
+        INSERT INTO roles (name) VALUES (#{name})
+    </insert>
+    <update id="update" parameterType="lut.cn.c2cplatform.entity.Role">
+        UPDATE roles SET name=#{name} WHERE id=#{id}
+    </update>
+    <delete id="deleteById" parameterType="int">
+        DELETE FROM roles WHERE id=#{id}
+    </delete>
+</mapper>
+

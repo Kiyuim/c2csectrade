@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="lut.cn.c2cplatform.mapper.ProductMediaMapper">
+    <resultMap id="ProductMediaResultMap" type="lut.cn.c2cplatform.entity.ProductMedia">
+        <id property="id" column="id"/>
+        <result property="url" column="url"/>
+        <result property="mediaType" column="media_type"/>
+        <result property="sortOrder" column="sort_order"/>
+        <!-- Map the foreign key product_id into a nested Product object (only id) -->
+        <association property="product" javaType="lut.cn.c2cplatform.entity.Product">
+            <id property="id" column="product_id"/>
+        </association>
+    </resultMap>
+    <select id="selectById" resultMap="ProductMediaResultMap">
+        SELECT * FROM pms_product_media WHERE id = #{id}
+    </select>
+    <select id="selectByProductId" resultMap="ProductMediaResultMap">
+        SELECT * FROM pms_product_media WHERE product_id = #{productId}
+    </select>
+    <insert id="insert" parameterType="lut.cn.c2cplatform.entity.ProductMedia">
+        INSERT INTO pms_product_media (url, media_type, sort_order, product_id)
+        VALUES (#{url}, #{mediaType}, #{sortOrder}, #{product.id})
+    </insert>
+    <update id="update" parameterType="lut.cn.c2cplatform.entity.ProductMedia">
+        UPDATE pms_product_media SET url=#{url}, media_type=#{mediaType}, sort_order=#{sortOrder}, product_id=#{product.id} WHERE id=#{id}
+    </update>
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM pms_product_media WHERE id=#{id}
+    </delete>
+</mapper>

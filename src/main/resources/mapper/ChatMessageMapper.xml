@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="lut.cn.c2cplatform.mapper.ChatMessageMapper">
+
+    <resultMap id="ChatMessageResultMap" type="lut.cn.c2cplatform.entity.ChatMessage">
+        <id property="id" column="id"/>
+        <result property="senderId" column="sender_id"/>
+        <result property="recipientId" column="recipient_id"/>
+        <result property="content" column="content"/>
+        <result property="timestamp" column="timestamp"/>
+        <result property="isRead" column="is_read"/>
+        <result property="senderUsername" column="sender_username"/>
+        <result property="recipientUsername" column="recipient_username"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="lut.cn.c2cplatform.entity.ChatMessage"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO chat_message (sender_id, recipient_id, content, timestamp, is_read)
+        VALUES (#{senderId}, #{recipientId}, #{content}, #{timestamp}, #{isRead})
+    </insert>
+
+    <select id="findHistoryBetweenUsers" resultMap="ChatMessageResultMap">
+        SELECT cm.*,
+               u1.username as sender_username,
+               u2.username as recipient_username
+        FROM chat_message cm
+        LEFT JOIN users u1 ON cm.sender_id = u1.id
+        LEFT JOIN users u2 ON cm.recipient_id = u2.id
+        WHERE (cm.sender_id = #{userId1} AND cm.recipient_id = #{userId2})
+           OR (cm.sender_id = #{userId2} AND cm.recipient_id = #{userId1})
+        ORDER BY cm.timestamp DESC
+        LIMIT #{limit}
+    </select>
+
+    <update id="markAsRead">
+        UPDATE chat_message
+        SET is_read = true
+        WHERE sender_id = #{senderId}
+          AND recipient_id = #{recipientId}
+          AND is_read = false
+    </update>
+
+    <select id="countUnreadMessages" resultType="int">
+        SELECT COUNT(*)
+        FROM chat_message
+        WHERE recipient_id = #{recipientId} AND is_read = false
+    </select>
+
+</mapper>
+

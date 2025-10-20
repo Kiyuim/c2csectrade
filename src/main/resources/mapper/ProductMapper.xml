@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="lut.cn.c2cplatform.mapper.ProductMapper">
+    <resultMap id="ProductResultMap" type="lut.cn.c2cplatform.entity.Product">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="name" column="name"/>
+        <result property="description" column="description"/>
+        <result property="price" column="price"/>
+        <result property="stock" column="stock"/>
+        <result property="conditionLevel" column="condition_level"/>
+        <result property="status" column="status"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+    <select id="selectById" resultMap="ProductResultMap">
+        SELECT * FROM pms_product WHERE id = #{id}
+    </select>
+    <select id="selectAll" resultMap="ProductResultMap">
+        SELECT * FROM pms_product
+    </select>
+    <insert id="insert" parameterType="lut.cn.c2cplatform.entity.Product" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO pms_product (user_id, name, description, price, stock, condition_level, status, created_at, updated_at)
+        VALUES (#{userId}, #{name}, #{description}, #{price}, #{stock}, #{conditionLevel}, #{status}, #{createdAt}, #{updatedAt})
+    </insert>
+    <update id="update" parameterType="lut.cn.c2cplatform.entity.Product">
+        UPDATE pms_product SET user_id=#{userId}, name=#{name}, description=#{description}, price=#{price}, stock=#{stock}, condition_level=#{conditionLevel}, status=#{status}, updated_at=#{updatedAt} WHERE id=#{id}
+    </update>
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM pms_product WHERE id=#{id}
+    </delete>
+</mapper>
