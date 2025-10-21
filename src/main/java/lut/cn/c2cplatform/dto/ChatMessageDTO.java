@@ -16,4 +16,5 @@ public class ChatMessageDTO {
     private String recipient;
     private String content;
     private Date timestamp;
+    private Boolean isSystemMessage;  // 标识是否为系统消息
 }

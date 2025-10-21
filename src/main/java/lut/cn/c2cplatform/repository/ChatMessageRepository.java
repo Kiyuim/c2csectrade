@@ -28,5 +28,17 @@ public class ChatMessageRepository {
     public int countUnreadMessages(Long recipientId) {
         return chatMessageMapper.countUnreadMessages(recipientId);
     }
+
+    public List<String> findConversationPartners(Long userId) {
+        return chatMessageMapper.findConversationPartners(userId);
+    }
+
+    public ChatMessage findLastMessageBetweenUsers(Long userId1, Long userId2) {
+        return chatMessageMapper.findLastMessageBetweenUsers(userId1, userId2);
+    }
+
+    public int countUnreadMessagesBetweenUsers(Long recipientId, Long senderId) {
+        return chatMessageMapper.countUnreadMessagesBetweenUsers(recipientId, senderId);
+    }
 }
 

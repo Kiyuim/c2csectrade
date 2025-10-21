@@ -18,5 +18,13 @@ public interface ChatMessageMapper {
                     @Param("recipientId") Long recipientId);
 
     int countUnreadMessages(@Param("recipientId") Long recipientId);
+
+    List<String> findConversationPartners(@Param("userId") Long userId);
+
+    ChatMessage findLastMessageBetweenUsers(@Param("userId1") Long userId1,
+                                           @Param("userId2") Long userId2);
+
+    int countUnreadMessagesBetweenUsers(@Param("recipientId") Long recipientId,
+                                       @Param("senderId") Long senderId);
 }
 

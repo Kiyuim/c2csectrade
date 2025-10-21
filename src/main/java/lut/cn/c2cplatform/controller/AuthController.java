@@ -2,6 +2,7 @@ package lut.cn.c2cplatform.controller;
 
 import lut.cn.c2cplatform.payload.RegisterRequest;
 import lut.cn.c2cplatform.payload.LoginRequest;
+import lut.cn.c2cplatform.payload.PasswordResetRequest;
 import lut.cn.c2cplatform.payload.AuthResponse;
 import lut.cn.c2cplatform.service.AuthService;
 import lut.cn.c2cplatform.service.CaptchaService;
@@ -65,6 +66,39 @@ public class AuthController {
 
         String token = jwtTokenProvider.generateToken(authentication);
         String role = authentication.getAuthorities().stream().findFirst().map(Object::toString).orElse("");
-        return ResponseEntity.ok(new AuthResponse(token, loginRequest.getUsername(), role));
+        // 获取完整用户信息
+        User user = authService.getUserByUsername(loginRequest.getUsername());
+
+        return ResponseEntity.ok(new AuthResponse(
+            token,
+            user.getUsername(),
+            role,
+            user.getId(),
+            user.getDisplayName(),
+            user.getAvatarUrl(),
+            user.getEmail()
+        ));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody PasswordResetRequest request) {
+        // 验证验证码
+        if (!captchaService.verifyAndConsume(request.getCaptchaId(), request.getCaptchaCode())) {
+            return ResponseEntity.badRequest().body("验证码错误或已过期");
+        }
+
+        // 验证新密码长度
+        if (request.getNewPassword() == null || request.getNewPassword().length() < 6) {
+            return ResponseEntity.badRequest().body("新密码长度至少为6位");
+        }
+
+        // 执行密码重置
+        boolean success = authService.resetPassword(request);
+
+        if (success) {
+            return ResponseEntity.ok("密码重置成功，请使用新密码登录");
+        } else {
+            return ResponseEntity.badRequest().body("用户名或邮箱不匹配，请检查后重试");
+        }
     }
 }

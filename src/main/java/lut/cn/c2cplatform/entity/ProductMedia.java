@@ -1,5 +1,6 @@
 package lut.cn.c2cplatform.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -7,7 +8,10 @@ import java.io.Serializable;
 @Data
 public class ProductMedia implements Serializable {
     private Integer id;
+    @JsonIgnore
     private Product product;
     private String url;
-    private int mediaType; // 0 for image, 1 for video
+    // 1 = image, 2 = video
+    private int mediaType;
+    private Integer sortOrder;
 }

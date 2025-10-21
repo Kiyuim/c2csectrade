@@ -1,6 +1,7 @@
 package lut.cn.c2cplatform.controller;
 
 import lut.cn.c2cplatform.dto.ChatMessageDTO;
+import lut.cn.c2cplatform.dto.ConversationDTO;
 import lut.cn.c2cplatform.entity.ChatMessage;
 import lut.cn.c2cplatform.service.ChatMessageService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,9 +14,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -34,11 +32,12 @@ public class ChatController {
             // 使用认证的用户名作为发送者
             String senderUsername = principal.getName();
 
-            // 保存消息到数据库
+            // 保存消息到数据库 (普通消息不是系统消息)
             ChatMessage savedMessage = chatMessageService.saveMessage(
                 senderUsername,
                 chatMessageDTO.getRecipient(),
-                chatMessageDTO.getContent()
+                chatMessageDTO.getContent(),
+                false
             );
 
             // 构建返回的DTO
@@ -47,6 +46,7 @@ public class ChatController {
                     .recipient(chatMessageDTO.getRecipient())
                     .content(savedMessage.getContent())
                     .timestamp(savedMessage.getTimestamp())
+                    .isSystemMessage(false)
                     .build();
 
             // 发送给接收者
@@ -86,6 +86,7 @@ public class ChatController {
                         .recipient(msg.getRecipientUsername())
                         .content(msg.getContent())
                         .timestamp(msg.getTimestamp())
+                        .isSystemMessage(msg.getIsSystemMessage() != null ? msg.getIsSystemMessage() : false)
                         .build())
                 .collect(Collectors.toList());
 
@@ -110,5 +111,61 @@ public class ChatController {
         String currentUsername = authentication.getName();
         int count = chatMessageService.getUnreadCount(currentUsername);
         return ResponseEntity.ok(count);
+    }
+
+    // REST API：获取会话列表
+    @GetMapping("/api/chat/conversations")
+    public ResponseEntity<List<ConversationDTO>> getConversations(Authentication authentication) {
+        String currentUsername = authentication.getName();
+        List<ConversationDTO> conversations = chatMessageService.getConversations(currentUsername);
+        return ResponseEntity.ok(conversations);
+    }
+
+    // REST API：管理员发送系统消息
+    @PostMapping("/api/chat/admin/send-system-message")
+    public ResponseEntity<?> sendSystemMessage(
+            @RequestBody ChatMessageDTO chatMessageDTO,
+            Authentication authentication) {
+        try {
+            String adminUsername = authentication.getName();
+
+            // 验证是否为管理员
+            boolean isAdmin = authentication.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+            if (!isAdmin) {
+                return ResponseEntity.status(403).body("只有管理员可以发送系统消息");
+            }
+
+            // 保存系统消息到数据库
+            ChatMessage savedMessage = chatMessageService.saveMessage(
+                "系统",  // 发送者显示为"系统"
+                chatMessageDTO.getRecipient(),
+                chatMessageDTO.getContent(),
+                true  // 标记为系统消息
+            );
+
+            // 构建返回的DTO
+            ChatMessageDTO responseDTO = ChatMessageDTO.builder()
+                    .sender("系统")
+                    .recipient(chatMessageDTO.getRecipient())
+                    .content(savedMessage.getContent())
+                    .timestamp(savedMessage.getTimestamp())
+                    .isSystemMessage(true)
+                    .build();
+
+            // 发送给接收者
+            messagingTemplate.convertAndSendToUser(
+                chatMessageDTO.getRecipient(),
+                "/queue/private",
+                responseDTO
+            );
+
+            return ResponseEntity.ok().body("系统消息发送成功");
+        } catch (Exception e) {
+            System.err.println("Error sending system message: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("发送失败: " + e.getMessage());
+        }
     }
 }

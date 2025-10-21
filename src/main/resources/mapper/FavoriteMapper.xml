@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="lut.cn.c2cplatform.mapper.FavoriteMapper">
+
+    <resultMap id="FavoriteResultMap" type="lut.cn.c2cplatform.entity.Favorite">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="productId" column="product_id"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="lut.cn.c2cplatform.entity.Favorite"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_favorites (user_id, product_id, created_at)
+        VALUES (#{userId}, #{productId}, #{createdAt})
+    </insert>
+
+    <delete id="deleteByUserIdAndProductId">
+        DELETE FROM user_favorites
+        WHERE user_id = #{userId} AND product_id = #{productId}
+    </delete>
+
+    <select id="selectByUserIdAndProductId" resultMap="FavoriteResultMap">
+        SELECT * FROM user_favorites
+        WHERE user_id = #{userId} AND product_id = #{productId}
+    </select>
+
+    <select id="selectProductIdsByUserId" resultType="long">
+        SELECT product_id FROM user_favorites
+        WHERE user_id = #{userId}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="countByUserId" resultType="int">
+        SELECT COUNT(*) FROM user_favorites
+        WHERE user_id = #{userId}
+    </select>
+
+</mapper>
+

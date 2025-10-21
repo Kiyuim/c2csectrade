@@ -4,8 +4,10 @@
     <resultMap id="UserResultMap" type="lut.cn.c2cplatform.entity.User">
         <id property="id" column="id"/>
         <result property="username" column="username"/>
+        <result property="displayName" column="display_name"/>
         <result property="passwordHash" column="password_hash"/>
         <result property="email" column="email"/>
+        <result property="avatarUrl" column="avatar_url"/>
         <result property="createdAt" column="created_at"/>
         <result property="updatedAt" column="updated_at"/>
     </resultMap>
@@ -31,11 +33,11 @@
         SELECT * FROM users
     </select>
     <insert id="insert" parameterType="lut.cn.c2cplatform.entity.User" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO users (username, password_hash, email, created_at, updated_at)
-        VALUES (#{username}, #{passwordHash}, #{email}, #{createdAt}, #{updatedAt})
+        INSERT INTO users (username, display_name, password_hash, email, avatar_url, created_at, updated_at)
+        VALUES (#{username}, #{displayName}, #{passwordHash}, #{email}, #{avatarUrl}, #{createdAt}, #{updatedAt})
     </insert>
     <update id="update" parameterType="lut.cn.c2cplatform.entity.User">
-        UPDATE users SET username=#{username}, password_hash=#{passwordHash}, email=#{email}, updated_at=#{updatedAt} WHERE id=#{id}
+        UPDATE users SET username=#{username}, display_name=#{displayName}, password_hash=#{passwordHash}, email=#{email}, avatar_url=#{avatarUrl}, updated_at=#{updatedAt} WHERE id=#{id}
     </update>
     <delete id="deleteById" parameterType="long">
         DELETE FROM users WHERE id=#{id}

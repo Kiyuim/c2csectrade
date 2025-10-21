@@ -7,6 +7,7 @@ import lut.cn.c2cplatform.mapper.RoleMapper;
 import lut.cn.c2cplatform.mapper.UserMapper;
 import lut.cn.c2cplatform.mapper.UserRoleMapper;
 import lut.cn.c2cplatform.payload.RegisterRequest;
+import lut.cn.c2cplatform.payload.PasswordResetRequest;
 import lut.cn.c2cplatform.service.AuthService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -32,6 +33,10 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public User registerUser(RegisterRequest registerRequest) {
+        // 检查用户名是否为保留关键字
+        if ("admin".equalsIgnoreCase(registerRequest.getUsername())) {
+            throw new UserAlreadyExistsException("Error: Username 'admin' is reserved and cannot be used!");
+        }
         // 检查用户名是否存在
         if (userMapper.selectByUsername(registerRequest.getUsername()) != null) {
             throw new UserAlreadyExistsException("Error: Username is already taken!");
@@ -42,6 +47,7 @@ public class AuthServiceImpl implements AuthService {
         }
         User user = new User();
         user.setUsername(registerRequest.getUsername());
+        user.setDisplayName(registerRequest.getDisplayName());
         user.setEmail(registerRequest.getEmail());
         user.setPasswordHash(passwordEncoder.encode(registerRequest.getPassword()));  // 使用 setPasswordHash
         user.setCreatedAt(Instant.now());
@@ -61,5 +67,33 @@ public class AuthServiceImpl implements AuthService {
 
         // 返回包含角色的用户
         return userMapper.selectByUsernameWithRoles(user.getUsername());
+    }
+
+    @Override
+    public User getUserByUsername(String username) {
+        return userMapper.selectByUsernameWithRoles(username);
+    }
+
+    @Override
+    @Transactional
+    public boolean resetPassword(PasswordResetRequest request) {
+        // 根据用户名查找用户
+        User user = userMapper.selectByUsername(request.getUsername());
+
+        if (user == null) {
+            return false; // 用户不存在
+        }
+
+        // 验证邮箱是否匹配
+        if (!user.getEmail().equals(request.getEmail())) {
+            return false; // 邮箱不匹配
+        }
+
+        // 更新密码
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        user.setUpdatedAt(Instant.now());
+        userMapper.update(user);
+
+        return true;
     }
 }

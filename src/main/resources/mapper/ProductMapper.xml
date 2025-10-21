@@ -9,6 +9,7 @@
         <result property="price" column="price"/>
         <result property="stock" column="stock"/>
         <result property="conditionLevel" column="condition_level"/>
+        <result property="location" column="location"/>
         <result property="status" column="status"/>
         <result property="createdAt" column="created_at"/>
         <result property="updatedAt" column="updated_at"/>
@@ -20,11 +21,13 @@
         SELECT * FROM pms_product
     </select>
     <insert id="insert" parameterType="lut.cn.c2cplatform.entity.Product" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO pms_product (user_id, name, description, price, stock, condition_level, status, created_at, updated_at)
-        VALUES (#{userId}, #{name}, #{description}, #{price}, #{stock}, #{conditionLevel}, #{status}, #{createdAt}, #{updatedAt})
+        INSERT INTO pms_product (user_id, name, description, price, stock, condition_level, location, status, created_at, updated_at)
+        VALUES (#{userId}, #{name}, #{description}, #{price}, #{stock}, #{conditionLevel}, #{location}, #{status}, #{createdAt}, #{updatedAt})
     </insert>
     <update id="update" parameterType="lut.cn.c2cplatform.entity.Product">
-        UPDATE pms_product SET user_id=#{userId}, name=#{name}, description=#{description}, price=#{price}, stock=#{stock}, condition_level=#{conditionLevel}, status=#{status}, updated_at=#{updatedAt} WHERE id=#{id}
+        UPDATE pms_product
+        SET user_id=#{userId}, name=#{name}, description=#{description}, price=#{price}, stock=#{stock}, condition_level=#{conditionLevel}, location=#{location}, status=#{status}, updated_at=#{updatedAt}
+        WHERE id=#{id}
     </update>
     <delete id="deleteById" parameterType="long">
         DELETE FROM pms_product WHERE id=#{id}

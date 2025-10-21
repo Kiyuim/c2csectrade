@@ -43,6 +43,21 @@ services:
     networks:
       - c2c-network
 
+  elasticsearch:
+    image: elasticsearch:8.11.0
+    container_name: c2c_elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    networks:
+      - c2c-network
+
   springboot-app:
     build:
       context: .
@@ -56,6 +71,7 @@ services:
       - mysql-db
       - redis-cache
       - minio
+      - elasticsearch
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - MYSQL_HOST=mysql-db
@@ -65,6 +81,8 @@ services:
       - MINIO_ENDPOINT=http://minio:9000
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin
+      - ELASTICSEARCH_HOST=elasticsearch
+      - ELASTICSEARCH_PORT=9200
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=Qsycl741
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-db:3306/trade?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
@@ -88,3 +106,4 @@ networks:
 
 volumes:
   mysql_data_v2:
+  es_data:

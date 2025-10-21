@@ -1,6 +1,8 @@
 package lut.cn.c2cplatform.controller;
 
 import lut.cn.c2cplatform.dto.ProductCreateDTO;
+import lut.cn.c2cplatform.dto.ProductDTO;
+import lut.cn.c2cplatform.entity.Product;
 import lut.cn.c2cplatform.service.ProductService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lut.cn.c2cplatform.security.UserDetailsImpl;
@@ -34,6 +36,41 @@ public class ProductController {
             return new ResponseEntity<>(createdProduct, HttpStatus.CREATED);
         } catch (Exception e) {
             return new ResponseEntity<>("Error creating product: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping
+    public ResponseEntity<List<ProductDTO>> listProducts() {
+        try {
+            List<Product> products = productService.listAllProducts();
+            List<ProductDTO> productDTOs = productService.convertToDTOList(products);
+            return ResponseEntity.ok(productDTOs);
+        } catch (Exception e) {
+            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getProductById(@PathVariable Long id) {
+        try {
+            ProductDTO productDTO = productService.getProductDTOById(id);
+            if (productDTO == null) {
+                return new ResponseEntity<>("Product not found", HttpStatus.NOT_FOUND);
+            }
+            return ResponseEntity.ok(productDTO);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Error fetching product: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> deleteProduct(@PathVariable Long id) {
+        try {
+            productService.deleteProduct(id);
+            return ResponseEntity.ok("Product deleted successfully");
+        } catch (Exception e) {
+            return new ResponseEntity<>("Error deleting product: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }

@@ -21,4 +21,5 @@ public class ChatMessage implements Serializable {
     private String content;
     private Date timestamp;
     private Boolean isRead;
+    private Boolean isSystemMessage;  // 标识是否为系统消息
 }

@@ -12,12 +12,13 @@
         <result property="isRead" column="is_read"/>
         <result property="senderUsername" column="sender_username"/>
         <result property="recipientUsername" column="recipient_username"/>
+        <result property="isSystemMessage" column="is_system_message"/>
     </resultMap>
 
     <insert id="insert" parameterType="lut.cn.c2cplatform.entity.ChatMessage"
             useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO chat_message (sender_id, recipient_id, content, timestamp, is_read)
-        VALUES (#{senderId}, #{recipientId}, #{content}, #{timestamp}, #{isRead})
+        INSERT INTO chat_message (sender_id, recipient_id, content, timestamp, is_read, is_system_message)
+        VALUES (#{senderId}, #{recipientId}, #{content}, #{timestamp}, #{isRead}, #{isSystemMessage})
     </insert>
 
     <select id="findHistoryBetweenUsers" resultMap="ChatMessageResultMap">
@@ -45,6 +46,39 @@
         SELECT COUNT(*)
         FROM chat_message
         WHERE recipient_id = #{recipientId} AND is_read = false
+    </select>
+
+    <select id="findConversationPartners" resultType="string">
+        SELECT DISTINCT u.username
+        FROM (
+            SELECT sender_id as user_id FROM chat_message WHERE recipient_id = #{userId}
+            UNION
+            SELECT recipient_id as user_id FROM chat_message WHERE sender_id = #{userId}
+        ) as conversations
+        JOIN users u ON u.id = conversations.user_id
+        WHERE u.id != #{userId}
+        ORDER BY u.username
+    </select>
+
+    <select id="findLastMessageBetweenUsers" resultMap="ChatMessageResultMap">
+        SELECT cm.*,
+               u1.username as sender_username,
+               u2.username as recipient_username
+        FROM chat_message cm
+        LEFT JOIN users u1 ON cm.sender_id = u1.id
+        LEFT JOIN users u2 ON cm.recipient_id = u2.id
+        WHERE (cm.sender_id = #{userId1} AND cm.recipient_id = #{userId2})
+           OR (cm.sender_id = #{userId2} AND cm.recipient_id = #{userId1})
+        ORDER BY cm.timestamp DESC
+        LIMIT 1
+    </select>
+
+    <select id="countUnreadMessagesBetweenUsers" resultType="int">
+        SELECT COUNT(*)
+        FROM chat_message
+        WHERE recipient_id = #{recipientId}
+          AND sender_id = #{senderId}
+          AND is_read = false
     </select>
 
 </mapper>

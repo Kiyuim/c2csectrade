@@ -1,13 +1,15 @@
 package lut.cn.c2cplatform.payload;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
-public class RegisterRequest {
+@Getter
+@Setter
+public class PasswordResetRequest {
     private String username;
-    private String displayName;
     private String email;
-    private String password;
+    private String newPassword;
     private String captchaId;
     private String captchaCode;
 }
+

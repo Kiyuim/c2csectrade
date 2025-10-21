@@ -15,6 +15,7 @@ public class Product implements Serializable {
     private String description;
     private BigDecimal price;
     private Integer conditionLevel;
+    private String location; // 新增：位置
     private int stock;
     private int status;
     private LocalDateTime createdAt;

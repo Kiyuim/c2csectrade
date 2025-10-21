@@ -3,10 +3,12 @@ package lut.cn.c2cplatform;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
 @EnableScheduling
+@EnableAsync
 @MapperScan("lut.cn.c2cplatform.mapper") // 扫描 Mapper 接口
 public class C2cPlatformApplication {
     public static void main(String[] args) {  // ✅ 正确写法

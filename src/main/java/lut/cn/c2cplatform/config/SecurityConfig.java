@@ -50,6 +50,9 @@ public class SecurityConfig {
                .requestMatchers("/api/auth/**").permitAll()
                .requestMatchers("/api/captcha/**").permitAll()
                .requestMatchers("/ws/**").permitAll() // allow WebSocket handshake and SockJS endpoints
+               .requestMatchers("/api/products").permitAll() // 允许所有用户查看商品列表
+               .requestMatchers("/api/products/*").permitAll() // 允许所有用户查看商品详情
+               .requestMatchers("/api/products/search").permitAll() // 允许所有用户搜索商品
                .requestMatchers("/api/chat/history/**").authenticated()
                .requestMatchers("/api/chat/read/**").authenticated()
                .requestMatchers("/api/admin/**").hasRole("ADMIN")

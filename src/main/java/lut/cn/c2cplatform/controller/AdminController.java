@@ -20,4 +20,15 @@ public class AdminController {
         // 返回包含角色信息的用户
         return ResponseEntity.ok(userMapper.selectAllWithRoles());
     }
+
+    @DeleteMapping("/users/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> deleteUser(@PathVariable Long id) {
+        try {
+            userMapper.deleteById(id);
+            return ResponseEntity.ok("User deleted successfully");
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error deleting user: " + e.getMessage());
+        }
+    }
 }
