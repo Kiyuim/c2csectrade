@@ -31,9 +31,36 @@ public class ProductController {
             Authentication authentication) {
         try {
             ProductCreateDTO createDTO = objectMapper.readValue(productDataJson, ProductCreateDTO.class);
-            Long userId = ((UserDetailsImpl) authentication.getPrincipal()).getId();
+
+            // 安全地获取用户ID
+            Long userId = null;
+            Object principal = authentication.getPrincipal();
+
+            if (principal instanceof UserDetailsImpl) {
+                userId = ((UserDetailsImpl) principal).getId();
+            } else if (principal instanceof org.springframework.security.core.userdetails.User) {
+                // 从用户名获取用户ID
+                String username = ((org.springframework.security.core.userdetails.User) principal).getUsername();
+                var user = productService.getUserByUsername(username);
+                if (user != null) {
+                    userId = user.getId();
+                }
+            } else if (principal instanceof String) {
+                // 直接是用户名字符串
+                var user = productService.getUserByUsername((String) principal);
+                if (user != null) {
+                    userId = user.getId();
+                }
+            }
+
+            if (userId == null) {
+                return new ResponseEntity<>("无法获取用户信息", HttpStatus.UNAUTHORIZED);
+            }
+
             var createdProduct = productService.createProduct(createDTO, files, userId);
             return new ResponseEntity<>(createdProduct, HttpStatus.CREATED);
+        } catch (ClassCastException e) {
+            return new ResponseEntity<>("用户认证类型错误: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (Exception e) {
             return new ResponseEntity<>("Error creating product: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }

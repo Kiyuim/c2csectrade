@@ -211,4 +211,11 @@ public class ProductService {
     public void deleteProduct(Long id) {
         productMapper.deleteById(id);
     }
+
+    /**
+     * Get user by username
+     */
+    public User getUserByUsername(String username) {
+        return userMapper.selectByUsername(username);
+    }
 }
