@@ -123,6 +123,65 @@ public class SearchService {
     }
 
     /**
+     * 简单的关键词搜索（用于推荐系统）
+     * @param keyword 搜索关键词
+     * @param limit 返回结果数量限制
+     * @return 产品文档列表
+     */
+    public List<ProductDocument> searchProductsByKeyword(String keyword, int limit) {
+        try {
+            SearchRequestDTO request = new SearchRequestDTO();
+            request.setKeyword(keyword);
+            request.setPage(0);
+            request.setSize(limit);
+
+            return searchProducts(request);
+        } catch (Exception e) {
+            System.err.println("Keyword search error: " + e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * 根据分类搜索商品（用于推荐系统）
+     * @param category 商品分类
+     * @param limit 返回结果数量限制
+     * @return 产品文档列表
+     */
+    public List<ProductDocument> searchProductsByCategory(String category, int limit) {
+        try {
+            List<Query> filterQueries = new ArrayList<>();
+
+            // 分类过滤
+            TermQuery categoryQuery = TermQuery.of(t -> t
+                .field("category")
+                .value(category)
+            );
+            filterQueries.add(Query.of(q -> q.term(categoryQuery)));
+
+            // 只显示在售商品
+            TermQuery statusQuery = TermQuery.of(t -> t.field("status").value(1));
+            filterQueries.add(Query.of(q -> q.term(statusQuery)));
+
+            BoolQuery boolQuery = BoolQuery.of(b -> b.filter(filterQueries));
+
+            NativeQuery searchQuery = NativeQuery.builder()
+                .withQuery(Query.of(q -> q.bool(boolQuery)))
+                .withPageable(PageRequest.of(0, limit))
+                .build();
+
+            SearchHits<ProductDocument> searchHits = elasticsearchOperations.search(searchQuery, ProductDocument.class);
+
+            return searchHits.getSearchHits().stream()
+                .map(hit -> hit.getContent())
+                .collect(Collectors.toList());
+        } catch (Exception e) {
+            System.err.println("Category search error: " + e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    /**
      * 将Product实体转换为Elasticsearch文档
      */
     private ProductDocument convertToDocument(Product product) {
@@ -156,4 +215,3 @@ public class SearchService {
         }
     }
 }
-

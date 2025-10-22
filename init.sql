@@ -97,6 +97,7 @@ CREATE TABLE `pms_product` (
     `stock` INT NOT NULL DEFAULT 1 COMMENT 'Stock (default 1 for used items)',
     `condition_level` INT NOT NULL DEFAULT 9 COMMENT 'Condition (1-10)',
     `location` VARCHAR(255) NULL COMMENT 'Location',
+    `category` VARCHAR(100) NULL DEFAULT 'other' COMMENT 'Product category',
     `status` TINYINT NOT NULL DEFAULT 1 COMMENT 'Status: 1=For Sale, 2=Sold, 0=Delisted',
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Creation time',
     `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Last update time',
@@ -104,6 +105,7 @@ CREATE TABLE `pms_product` (
     INDEX `idx_user_id` (`user_id`),
     INDEX `idx_status` (`status`),
     INDEX `idx_price` (`price`),
+    INDEX `idx_category` (`category`),
     CONSTRAINT `fk_product_user` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Products table';
 
@@ -171,41 +173,4 @@ ON DUPLICATE KEY UPDATE user_id=VALUES(user_id);
 -- End of Script
 -- =================================================================
 SELECT 'Database structure and essential data seeded successfully.' AS status;
-
--- 修改数据库字符集
-ALTER DATABASE trade CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- 修改 users 表字符集
-ALTER TABLE users CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- 修改 pms_product 表字符集
-ALTER TABLE pms_product CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
-
-
--- 检查所有表的字符集
-SELECT
-    TABLE_NAME,
-    TABLE_COLLATION
-FROM
-    information_schema.TABLES
-WHERE
-    TABLE_SCHEMA = 'trade';
-
--- 检查商品数量
-SELECT COUNT(*) as total_products FROM pms_product;
-
--- 显示前20条商品数据（检查乱码）
-SELECT
-    id,
-    name,
-    description,
-    location,
-    HEX(name) as name_hex,
-    CHAR_LENGTH(name) as name_length
-FROM
-    pms_product
-        LIMIT 20;
-
--- 修改 chat_message 表字符集
 ALTER TABLE chat_message CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

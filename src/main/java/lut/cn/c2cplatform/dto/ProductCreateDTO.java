@@ -10,6 +10,7 @@ public class ProductCreateDTO {
     private BigDecimal price;
     private Integer conditionLevel;
     private String location;
+    private String category; // 新增：商品分类
     private Integer stock; // 新增：库存
     // 可根据实际需求扩展字段
 
@@ -23,6 +24,8 @@ public class ProductCreateDTO {
     public void setConditionLevel(Integer conditionLevel) { this.conditionLevel = conditionLevel; }
     public String getLocation() { return location; }
     public void setLocation(String location) { this.location = location; }
+    public String getCategory() { return category; }
+    public void setCategory(String category) { this.category = category; }
     public Integer getStock() { return stock; }
     public void setStock(Integer stock) { this.stock = stock; }
 }

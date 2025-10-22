@@ -17,7 +17,7 @@
     <select id="selectByProductId" resultMap="ProductMediaResultMap">
         SELECT * FROM pms_product_media WHERE product_id = #{productId}
     </select>
-    <insert id="insert" parameterType="lut.cn.c2cplatform.entity.ProductMedia">
+    <insert id="insert" parameterType="lut.cn.c2cplatform.entity.ProductMedia" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO pms_product_media (url, media_type, sort_order, product_id)
         VALUES (#{url}, #{mediaType}, #{sortOrder}, #{product.id})
     </insert>

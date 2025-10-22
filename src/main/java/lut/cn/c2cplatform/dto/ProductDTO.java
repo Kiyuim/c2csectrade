@@ -20,6 +20,7 @@ public class ProductDTO {
     private Integer stock;
     private Integer conditionLevel;
     private String location;
+    private String category; // 新增：商品分类
     private Integer status;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;

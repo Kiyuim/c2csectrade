@@ -27,7 +27,7 @@ public class ProductController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> createProduct(
             @RequestPart("productData") String productDataJson,
-            @RequestPart("files") List<MultipartFile> files,
+            @RequestPart(value = "files", required = false) List<MultipartFile> files,
             Authentication authentication) {
         try {
             ProductCreateDTO createDTO = objectMapper.readValue(productDataJson, ProductCreateDTO.class);
@@ -60,19 +60,43 @@ public class ProductController {
             var createdProduct = productService.createProduct(createDTO, files, userId);
             return new ResponseEntity<>(createdProduct, HttpStatus.CREATED);
         } catch (ClassCastException e) {
-            return new ResponseEntity<>("用户认证类型错误: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            System.err.println("用户认证类型错误: " + e.getMessage());
+            e.printStackTrace();
+            return new ResponseEntity<>("用户认证类型错误", HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (IllegalArgumentException e) {
+            System.err.println("参数错误: " + e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
-            return new ResponseEntity<>("Error creating product: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            System.err.println("创建商品失败: " + e.getMessage());
+            e.printStackTrace();
+            return new ResponseEntity<>("创建商品失败，请稍后重试", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     @GetMapping
-    public ResponseEntity<List<ProductDTO>> listProducts() {
+    public ResponseEntity<List<ProductDTO>> listProducts(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) java.math.BigDecimal minPrice,
+            @RequestParam(required = false) java.math.BigDecimal maxPrice,
+            @RequestParam(required = false) Integer conditionLevel,
+            @RequestParam(required = false) String location,
+            @RequestParam(required = false) String categories) {
         try {
-            List<Product> products = productService.listAllProducts();
+            List<Product> products;
+            // 如果有任何筛选参数，使用筛选查询
+            if (keyword != null || minPrice != null || maxPrice != null ||
+                conditionLevel != null || location != null || categories != null) {
+                products = productService.listProductsWithFilters(keyword, minPrice, maxPrice,
+                                                                   conditionLevel, location, categories);
+            } else {
+                products = productService.listAllProducts();
+            }
             List<ProductDTO> productDTOs = productService.convertToDTOList(products);
             return ResponseEntity.ok(productDTOs);
         } catch (Exception e) {
+            // 不暴露详细错误信息给前端，只记录日志
+            System.err.println("获取商品列表失败: " + e.getMessage());
+            e.printStackTrace();
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -143,8 +167,16 @@ public class ProductController {
             ProductCreateDTO updateDTO = objectMapper.readValue(productDataJson, ProductCreateDTO.class);
             Product updatedProduct = productService.updateProduct(id, updateDTO, files);
             return ResponseEntity.ok(updatedProduct);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            System.err.println("JSON解析失败: " + e.getMessage());
+            return new ResponseEntity<>("商品信息格式错误", HttpStatus.BAD_REQUEST);
+        } catch (IllegalArgumentException e) {
+            System.err.println("参数错误: " + e.getMessage());
+            return new ResponseEntity<>("参数错误: " + e.getMessage(), HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
-            return new ResponseEntity<>("Error updating product: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            System.err.println("更新商品失败: " + e.getMessage());
+            e.printStackTrace();
+            return new ResponseEntity<>("更新商品失败，请稍后重试", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 

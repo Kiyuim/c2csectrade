@@ -7,7 +7,7 @@ import java.io.Serializable;
 
 @Data
 public class ProductMedia implements Serializable {
-    private Integer id;
+    private Long id;  // 修改为Long以匹配数据库BIGINT类型
     @JsonIgnore
     private Product product;
     private String url;

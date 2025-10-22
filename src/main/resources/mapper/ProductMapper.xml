@@ -10,6 +10,7 @@
         <result property="stock" column="stock"/>
         <result property="conditionLevel" column="condition_level"/>
         <result property="location" column="location"/>
+        <result property="category" column="category"/>
         <result property="status" column="status"/>
         <result property="createdAt" column="created_at"/>
         <result property="updatedAt" column="updated_at"/>
@@ -23,16 +24,64 @@
     <select id="selectByUserId" resultMap="ProductResultMap">
         SELECT * FROM pms_product WHERE user_id = #{userId} AND status = 1 ORDER BY created_at DESC
     </select>
+    <select id="selectWithFilters" resultMap="ProductResultMap">
+        SELECT * FROM pms_product
+        WHERE status = 1
+        <if test="keyword != null and keyword != ''">
+            AND (name LIKE CONCAT('%', #{keyword}, '%') OR description LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        <if test="minPrice != null">
+            AND price &gt;= #{minPrice}
+        </if>
+        <if test="maxPrice != null">
+            AND price &lt;= #{maxPrice}
+        </if>
+        <if test="conditionLevel != null">
+            AND condition_level = #{conditionLevel}
+        </if>
+        <if test="location != null and location != ''">
+            AND location LIKE CONCAT('%', #{location}, '%')
+        </if>
+        <if test="category != null and category != ''">
+            AND FIND_IN_SET(category, #{category}) > 0
+        </if>
+        ORDER BY created_at DESC
+    </select>
     <insert id="insert" parameterType="lut.cn.c2cplatform.entity.Product" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO pms_product (user_id, name, description, price, stock, condition_level, location, status, created_at, updated_at)
-        VALUES (#{userId}, #{name}, #{description}, #{price}, #{stock}, #{conditionLevel}, #{location}, #{status}, #{createdAt}, #{updatedAt})
+        INSERT INTO pms_product (user_id, name, description, price, stock, condition_level, location, category, status, created_at, updated_at)
+        VALUES (#{userId}, #{name}, #{description}, #{price}, #{stock}, #{conditionLevel}, #{location}, #{category}, #{status}, #{createdAt}, #{updatedAt})
     </insert>
     <update id="update" parameterType="lut.cn.c2cplatform.entity.Product">
         UPDATE pms_product
-        SET user_id=#{userId}, name=#{name}, description=#{description}, price=#{price}, stock=#{stock}, condition_level=#{conditionLevel}, location=#{location}, status=#{status}, updated_at=#{updatedAt}
+        SET user_id=#{userId}, name=#{name}, description=#{description}, price=#{price}, stock=#{stock}, condition_level=#{conditionLevel}, location=#{location}, category=#{category}, status=#{status}, updated_at=#{updatedAt}
         WHERE id=#{id}
     </update>
     <delete id="deleteById" parameterType="long">
         DELETE FROM pms_product WHERE id=#{id}
     </delete>
+
+    <!-- For recommendation system -->
+    <select id="selectByIds" resultMap="ProductResultMap">
+        SELECT * FROM pms_product
+        WHERE id IN
+        <foreach item="id" collection="ids" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        AND status = 1
+    </select>
+
+    <select id="selectByCategory" resultMap="ProductResultMap">
+        SELECT * FROM pms_product
+        WHERE category = #{category}
+        AND status = 1
+        ORDER BY created_at DESC
+        LIMIT 20
+    </select>
+
+    <select id="selectRecentProducts" resultMap="ProductResultMap">
+        SELECT * FROM pms_product
+        WHERE status = 1
+        ORDER BY created_at DESC
+        LIMIT #{limit}
+    </select>
 </mapper>
