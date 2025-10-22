@@ -13,6 +13,7 @@ public class ProductDTO {
     private Long userId;
     private String username;
     private String displayName;
+    private String avatarUrl; // 新增：卖家头像URL
     private String name;
     private String description;
     private BigDecimal price;
@@ -37,4 +38,3 @@ public class ProductDTO {
         private Integer sortOrder;
     }
 }
-

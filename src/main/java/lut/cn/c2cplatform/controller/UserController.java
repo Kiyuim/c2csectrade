@@ -75,6 +75,7 @@ public class UserController {
 
             // 更新用户头像URL
             user.setAvatarUrl(avatarUrl);
+            user.setUpdatedAt(java.time.Instant.now());
             userMapper.update(user);
 
             Map<String, String> response = new HashMap<>();
@@ -106,6 +107,7 @@ public class UserController {
             }
 
             // 更新用户头像URL
+            user.setUpdatedAt(java.time.Instant.now());
             user.setAvatarUrl(avatarUrl);
             userMapper.update(user);
 
@@ -132,6 +134,7 @@ public class UserController {
                 return ResponseEntity.status(404).body("用户不存在");
             }
 
+            user.setUpdatedAt(java.time.Instant.now());
             // 清除用户头像URL
             user.setAvatarUrl(null);
             userMapper.update(user);
@@ -179,6 +182,7 @@ public class UserController {
             if (user == null) {
                 return ResponseEntity.status(404).body(Map.of("message", "用户不存在"));
             }
+            user.setUpdatedAt(java.time.Instant.now());
 
             // 更新用户显示名称
             user.setDisplayName(newDisplayName);

@@ -148,6 +148,7 @@ public class ProductService {
             if (user != null) {
                 dto.setUsername(user.getUsername());
                 dto.setDisplayName(user.getDisplayName());
+                dto.setAvatarUrl(user.getAvatarUrl()); // 新增：头像URL
             }
         }
 
@@ -210,6 +211,87 @@ public class ProductService {
 
     public void deleteProduct(Long id) {
         productMapper.deleteById(id);
+    }
+
+    /**
+     * Get products by user ID
+     */
+    public List<Product> getProductsByUserId(Long userId) {
+        List<Product> products = productMapper.selectByUserId(userId);
+        // Load media for each product
+        for (Product product : products) {
+            List<ProductMedia> media = productMediaMapper.selectByProductId(Long.valueOf(product.getId()));
+            product.setMedia(media);
+        }
+        return products;
+    }
+
+    /**
+     * Update product
+     */
+    @Transactional
+    public Product updateProduct(Long id, ProductCreateDTO dto, List<MultipartFile> files) {
+        Product product = productMapper.selectById(id);
+        if (product == null) {
+            throw new RuntimeException("Product not found");
+        }
+
+        // Update basic info
+        product.setName(dto.getName());
+        product.setDescription(dto.getDescription());
+        product.setPrice(dto.getPrice());
+        product.setConditionLevel(dto.getConditionLevel());
+        product.setLocation(dto.getLocation());
+        product.setStock(dto.getStock() != null ? dto.getStock() : product.getStock());
+        product.setUpdatedAt(LocalDateTime.now());
+
+        productMapper.update(product);
+
+        // If new files provided, replace all media
+        if (files != null && !files.isEmpty()) {
+            // Delete old media
+            List<ProductMedia> oldMedia = productMediaMapper.selectByProductId(id);
+            for (ProductMedia media : oldMedia) {
+                productMediaMapper.deleteById(media.getId().longValue());
+                // Optionally delete files from MinIO
+                try {
+                    String bucket = minioProperties.getBucketName();
+                    String url = media.getUrl();
+                    int idx = url.indexOf(bucket + "/");
+                    String objectName = idx >= 0 ? url.substring(idx + bucket.length() + 1) : null;
+                    if (objectName != null) {
+                        fileStorageService.deleteFile(objectName);
+                    }
+                } catch (Exception e) {
+                    // Log error but continue
+                }
+            }
+
+            // Upload and save new media
+            List<ProductMedia> newMediaList = new ArrayList<>();
+            int sortOrder = 0;
+            for (MultipartFile file : files) {
+                try {
+                    String url = fileStorageService.uploadFile(file);
+                    ProductMedia media = new ProductMedia();
+                    media.setProduct(product);
+                    media.setUrl(url);
+                    media.setMediaType(url.matches("(?i).*\\.(mp4|mov|avi|wmv|flv|mkv)$") ? 2 : 1);
+                    media.setSortOrder(sortOrder++);
+                    productMediaMapper.insert(media);
+                    newMediaList.add(media);
+                } catch (Exception e) {
+                    throw new RuntimeException("Failed to upload media file: " + e.getMessage());
+                }
+            }
+            product.setMedia(newMediaList);
+        } else {
+            // Keep existing media
+            List<ProductMedia> media = productMediaMapper.selectByProductId(id);
+            product.setMedia(media);
+        }
+
+        return product;
     }
 
     /**

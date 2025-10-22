@@ -100,4 +100,67 @@ public class ProductController {
             return new ResponseEntity<>("Error deleting product: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    @GetMapping("/my-products")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> getMyProducts(Authentication authentication) {
+        try {
+            Long userId = extractUserId(authentication);
+            if (userId == null) {
+                return new ResponseEntity<>("无法获取用户信息", HttpStatus.UNAUTHORIZED);
+            }
+
+            List<Product> products = productService.getProductsByUserId(userId);
+            List<ProductDTO> productDTOs = productService.convertToDTOList(products);
+            return ResponseEntity.ok(productDTOs);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Error fetching products: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> updateProduct(
+            @PathVariable Long id,
+            @RequestPart("productData") String productDataJson,
+            @RequestPart(value = "files", required = false) List<MultipartFile> files,
+            Authentication authentication) {
+        try {
+            Long userId = extractUserId(authentication);
+            if (userId == null) {
+                return new ResponseEntity<>("无法获取用户信息", HttpStatus.UNAUTHORIZED);
+            }
+
+            // Verify ownership
+            Product existingProduct = productService.getProductById(id);
+            if (existingProduct == null) {
+                return new ResponseEntity<>("商品不存在", HttpStatus.NOT_FOUND);
+            }
+            if (!existingProduct.getUserId().equals(userId)) {
+                return new ResponseEntity<>("无权限修改此商品", HttpStatus.FORBIDDEN);
+            }
+
+            ProductCreateDTO updateDTO = objectMapper.readValue(productDataJson, ProductCreateDTO.class);
+            Product updatedProduct = productService.updateProduct(id, updateDTO, files);
+            return ResponseEntity.ok(updatedProduct);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Error updating product: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private Long extractUserId(Authentication authentication) {
+        Object principal = authentication.getPrincipal();
+
+        if (principal instanceof UserDetailsImpl) {
+            return ((UserDetailsImpl) principal).getId();
+        } else if (principal instanceof org.springframework.security.core.userdetails.User) {
+            String username = ((org.springframework.security.core.userdetails.User) principal).getUsername();
+            var user = productService.getUserByUsername(username);
+            return user != null ? user.getId() : null;
+        } else if (principal instanceof String) {
+            var user = productService.getUserByUsername((String) principal);
+            return user != null ? user.getId() : null;
+        }
+        return null;
+    }
 }

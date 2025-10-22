@@ -18,7 +18,10 @@
         SELECT * FROM pms_product WHERE id = #{id}
     </select>
     <select id="selectAll" resultMap="ProductResultMap">
-        SELECT * FROM pms_product
+        SELECT * FROM pms_product WHERE status = 1 ORDER BY created_at DESC
+    </select>
+    <select id="selectByUserId" resultMap="ProductResultMap">
+        SELECT * FROM pms_product WHERE user_id = #{userId} AND status = 1 ORDER BY created_at DESC
     </select>
     <insert id="insert" parameterType="lut.cn.c2cplatform.entity.Product" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO pms_product (user_id, name, description, price, stock, condition_level, location, status, created_at, updated_at)

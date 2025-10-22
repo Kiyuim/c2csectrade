@@ -9,6 +9,7 @@ import java.util.List;
 public interface ProductMapper {
     Product selectById(@Param("id") Long id);
     List<Product> selectAll();
+    List<Product> selectByUserId(@Param("userId") Long userId);
     int insert(Product product);
     int update(Product product);
     int deleteById(@Param("id") Long id);
