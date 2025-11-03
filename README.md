@@ -1,6 +1,6 @@
-# ReBookTrade - 校园二手商品交易平台
+# c2csectrade - 校园二手商品交易平台
 
-ReBookTrade 是一个功能完善的C2C（用户对用户）二手商品交易平台，旨在为校园用户提供一个安全、便捷、有趣的闲置物品交易环境。尽管项目名称中含有“Book”，但其功能已扩展至支持数码产品、服装鞋包、图书、家居生活等十多个品类。项目采用现代化的前后端分离架构，后端基于Spring Boot，前端基于Vue.js，并集成了即时通讯、在线议价、信用评价等多种创新功能。
+c2csectrade 是一个功能完善的C2C（用户对用户）二手商品交易平台，旨在为校园用户提供一个安全、便捷、有趣的闲置物品交易环境。其功能已扩展至支持数码产品、服装鞋包、图书、家居生活等十多个品类。项目采用现代化的前后端分离架构，后端基于Spring Boot，前端基于Vue.js，并集成了即时通讯、在线议价、信用评价等多种创新功能。
 
 ## ✨ 核心功能
 
@@ -84,8 +84,8 @@ ReBookTrade 是一个功能完善的C2C（用户对用户）二手商品交易�
 
 1.  **克隆仓库**
     ```bash
-    git clone https://github.com/your-username/rebooktrade.git
-    cd rebooktrade
+    git clone https://github.com/kiyuim/c2csectrade.git
+    cd c2csectrade
     ```
 
 2.  **编译项目**
