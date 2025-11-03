@@ -9,7 +9,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -55,6 +54,15 @@ public class ChatMessageService {
     }
 
     public List<ChatMessage> getChatHistory(String username1, String username2, int limit) {
+        // 特殊处理系统消息
+        if ("系统".equals(username2)) {
+            User user1 = userMapper.selectByUsername(username1);
+            if (user1 == null) {
+                throw new RuntimeException("User not found");
+            }
+            return chatMessageRepository.findSystemMessages(user1.getId(), limit);
+        }
+
         User user1 = userMapper.selectByUsername(username1);
         User user2 = userMapper.selectByUsername(username2);
 
@@ -66,6 +74,16 @@ public class ChatMessageService {
     }
 
     public void markMessagesAsRead(String senderUsername, String recipientUsername) {
+        // 特殊处理系统消息
+        if ("系统".equals(senderUsername)) {
+            User recipient = userMapper.selectByUsername(recipientUsername);
+            if (recipient == null) {
+                throw new RuntimeException("Recipient not found");
+            }
+            chatMessageRepository.markSystemMessagesAsRead(recipient.getId());
+            return;
+        }
+
         User sender = userMapper.selectByUsername(senderUsername);
         User recipient = userMapper.selectByUsername(recipientUsername);
 
@@ -136,5 +154,10 @@ public class ChatMessageService {
         return date.toInstant()
                 .atZone(java.time.ZoneId.systemDefault())
                 .toLocalDateTime();
+    }
+
+    // 获取所有用户（用于群发消息）
+    public List<User> getAllUsers() {
+        return userMapper.selectAll();
     }
 }

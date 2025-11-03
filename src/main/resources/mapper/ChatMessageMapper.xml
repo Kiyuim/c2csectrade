@@ -81,5 +81,49 @@
           AND is_read = false
     </select>
 
+    <select id="findSystemMessages" resultMap="ChatMessageResultMap">
+        SELECT cm.*,
+               '系统' as sender_username,
+               u.username as recipient_username
+        FROM chat_message cm
+        LEFT JOIN users u ON cm.recipient_id = u.id
+        WHERE cm.recipient_id = #{recipientId}
+          AND cm.sender_id IS NULL
+          AND cm.is_system_message = true
+        ORDER BY cm.timestamp DESC
+        LIMIT #{limit}
+    </select>
+
+    <update id="markSystemMessagesAsRead">
+        UPDATE chat_message
+        SET is_read = true
+        WHERE sender_id IS NULL
+          AND recipient_id = #{recipientId}
+          AND is_system_message = true
+          AND is_read = false
+    </update>
+
+    <select id="findLastSystemMessage" resultMap="ChatMessageResultMap">
+        SELECT cm.*,
+               '系统' as sender_username,
+               u.username as recipient_username
+        FROM chat_message cm
+        LEFT JOIN users u ON cm.recipient_id = u.id
+        WHERE cm.recipient_id = #{recipientId}
+          AND cm.sender_id IS NULL
+          AND cm.is_system_message = true
+        ORDER BY cm.timestamp DESC
+        LIMIT 1
+    </select>
+
+    <select id="countUnreadSystemMessages" resultType="int">
+        SELECT COUNT(*)
+        FROM chat_message
+        WHERE recipient_id = #{recipientId}
+          AND sender_id IS NULL
+          AND is_system_message = true
+          AND is_read = false
+    </select>
+
 </mapper>
 

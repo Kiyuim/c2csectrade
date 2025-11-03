@@ -39,7 +39,8 @@
       <div class="form-row">
         <div class="form-group">
           <label>价格 (¥) *</label>
-          <input v-model.number="product.price" type="number" step="0.01" min="0" placeholder="0.00" required />
+          <input v-model.number="product.price" type="number" step="0.01" min="0.01" max="99999999.99" placeholder="0.00" required />
+          <p class="help-text" style="font-size: 12px; color: #666; margin-top: 4px;">最大价格：99,999,999.99元</p>
         </div>
 
         <div class="form-group">
@@ -186,6 +187,17 @@ const handleSubmit = async () => {
     return;
   }
 
+  // 验证价格范围
+  if (!product.price || product.price <= 0) {
+    toast('请输入有效的价格', 'warning');
+    return;
+  }
+
+  if (product.price > 99999999.99) {
+    toast('价格不能超过 99,999,999.99 元', 'warning');
+    return;
+  }
+
   submitting.value = true;
 
   try {
@@ -195,7 +207,7 @@ const handleSubmit = async () => {
     const productData = {
       name: product.name,
       description: product.description,
-      price: product.price,
+      price: parseFloat(product.price.toFixed(2)), // 确保只有2位小数
       stock: product.stock,
       conditionLevel: product.conditionLevel,
       location: product.location,

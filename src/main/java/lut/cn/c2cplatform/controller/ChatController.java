@@ -127,6 +127,7 @@ public class ChatController {
             @RequestBody ChatMessageDTO chatMessageDTO,
             Authentication authentication) {
         try {
+            System.out.println("[SYSTEM_MSG] 开始发送系统消息到: " + chatMessageDTO.getRecipient());
             String adminUsername = authentication.getName();
 
             // 验证是否为管理员
@@ -134,6 +135,7 @@ public class ChatController {
                     .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
             if (!isAdmin) {
+                System.err.println("[SYSTEM_MSG] 权限不足: " + adminUsername);
                 return ResponseEntity.status(403).body("只有管理员可以发送系统消息");
             }
 
@@ -144,6 +146,7 @@ public class ChatController {
                 chatMessageDTO.getContent(),
                 true  // 标记为系统消息
             );
+            System.out.println("[SYSTEM_MSG] 消息已保存到数据库，ID: " + savedMessage.getId());
 
             // 构建返回的DTO
             ChatMessageDTO responseDTO = ChatMessageDTO.builder()
@@ -155,17 +158,101 @@ public class ChatController {
                     .build();
 
             // 发送给接收者
+            System.out.println("[SYSTEM_MSG] 尝试通过WebSocket发送到用户: " + chatMessageDTO.getRecipient());
             messagingTemplate.convertAndSendToUser(
                 chatMessageDTO.getRecipient(),
                 "/queue/private",
                 responseDTO
             );
+            System.out.println("[SYSTEM_MSG] WebSocket发送完成");
 
             return ResponseEntity.ok().body("系统消息发送成功");
         } catch (Exception e) {
-            System.err.println("Error sending system message: " + e.getMessage());
+            System.err.println("[SYSTEM_MSG] 发送失败: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(500).body("发送失败: " + e.getMessage());
+        }
+    }
+
+    // REST API：管理员群发系统消息给所有用户
+    @PostMapping("/api/message/broadcast")
+    public ResponseEntity<?> broadcastSystemMessage(
+            @RequestBody java.util.Map<String, String> payload,
+            Authentication authentication) {
+        try {
+            System.out.println("[BROADCAST] 开始群发系统消息");
+
+            // 验证是否为管理员
+            boolean isAdmin = authentication.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+            if (!isAdmin) {
+                System.err.println("[BROADCAST] 权限不足");
+                return ResponseEntity.status(403).body("只有管理员可以发送系统消息");
+            }
+
+            String message = payload.get("message");
+            if (message == null || message.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("消息内容不能为空");
+            }
+
+            // 获取所有用户
+            String adminUsername = authentication.getName();
+            List<lut.cn.c2cplatform.entity.User> allUsers = chatMessageService.getAllUsers();
+            System.out.println("[BROADCAST] 找到 " + allUsers.size() + " 个用户");
+
+            int successCount = 0;
+            int failCount = 0;
+
+            for (lut.cn.c2cplatform.entity.User user : allUsers) {
+                // 跳过管理员自己
+                if (user.getUsername().equals(adminUsername)) {
+                    System.out.println("[BROADCAST] 跳过管理员: " + user.getUsername());
+                    continue;
+                }
+
+                try {
+                    System.out.println("[BROADCAST] 发送给用户: " + user.getUsername());
+
+                    // 保存系统消息到数据库
+                    ChatMessage savedMessage = chatMessageService.saveMessage(
+                        "系统",
+                        user.getUsername(),
+                        message,
+                        true
+                    );
+
+                    // 构建返回的DTO
+                    ChatMessageDTO responseDTO = ChatMessageDTO.builder()
+                            .sender("系统")
+                            .recipient(user.getUsername())
+                            .content(savedMessage.getContent())
+                            .timestamp(savedMessage.getTimestamp())
+                            .isSystemMessage(true)
+                            .build();
+
+                    // 发送给用户
+                    messagingTemplate.convertAndSendToUser(
+                        user.getUsername(),
+                        "/queue/private",
+                        responseDTO
+                    );
+
+                    successCount++;
+                } catch (Exception e) {
+                    System.err.println("[BROADCAST] 发送给 " + user.getUsername() + " 失败: " + e.getMessage());
+                    e.printStackTrace();
+                    failCount++;
+                }
+            }
+
+            String result = String.format("群发完成：成功 %d，失败 %d", successCount, failCount);
+            System.out.println("[BROADCAST] " + result);
+            return ResponseEntity.ok().body(result);
+        } catch (Exception e) {
+            System.err.println("[BROADCAST] 群发失败: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("群发失败: " + e.getMessage());
         }
     }
 }

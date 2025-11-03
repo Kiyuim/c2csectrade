@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="lut.cn.c2cplatform.mapper.OrderMapper">
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO orders (user_id, total_amount, status, expire_time, created_at, updated_at)
+        VALUES (#{userId}, #{totalAmount}, #{status}, #{expireTime}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <select id="findById" resultType="lut.cn.c2cplatform.entity.Order">
+        SELECT * FROM orders WHERE id = #{id}
+    </select>
+
+    <update id="updateStatus">
+        UPDATE orders SET status = #{status}, payment_method = #{paymentMethod}, updated_at = #{updatedAt} WHERE id = #{id}
+    </update>
+
+    <select id="findByUserId" resultType="lut.cn.c2cplatform.entity.Order">
+        SELECT * FROM orders WHERE user_id = #{userId} ORDER BY created_at DESC
+    </select>
+
+    <select id="findExpiredOrders" resultType="lut.cn.c2cplatform.entity.Order">
+        SELECT * FROM orders
+        WHERE status = 'PENDING'
+        AND expire_time IS NOT NULL
+        AND expire_time &lt; NOW()
+    </select>
+
+    <update id="batchUpdateStatusToExpired">
+        UPDATE orders
+        SET status = 'EXPIRED', updated_at = NOW()
+        WHERE id IN
+        <foreach collection="orderIds" item="orderId" open="(" separator="," close=")">
+            #{orderId}
+        </foreach>
+    </update>
+</mapper>

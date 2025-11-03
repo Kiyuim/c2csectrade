@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="lut.cn.c2cplatform.mapper.OrderItemMapper">
+    <insert id="insert">
+        INSERT INTO order_items (order_id, product_id, quantity, price, from_cart)
+        VALUES (#{orderId}, #{productId}, #{quantity}, #{price}, #{fromCart})
+    </insert>
+
+    <select id="findByOrderId" resultType="lut.cn.c2cplatform.entity.OrderItem">
+        SELECT * FROM order_items WHERE order_id = #{orderId}
+    </select>
+</mapper>

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="lut.cn.c2cplatform.mapper.ReportMapper">
+    <resultMap id="ReportResultMap" type="lut.cn.c2cplatform.entity.Report">
+        <id property="id" column="id"/>
+        <result property="productId" column="product_id"/>
+        <result property="reporterId" column="reporter_id"/>
+        <result property="reason" column="reason"/>
+        <result property="description" column="description"/>
+        <result property="status" column="status"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="lut.cn.c2cplatform.entity.Report" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO pms_report (product_id, reporter_id, reason, description, status, created_at, updated_at)
+        VALUES (#{productId}, #{reporterId}, #{reason}, #{description}, #{status}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <select id="selectById" resultMap="ReportResultMap">
+        SELECT * FROM pms_report WHERE id = #{id}
+    </select>
+
+    <select id="selectAll" resultMap="ReportResultMap">
+        SELECT * FROM pms_report ORDER BY created_at DESC
+    </select>
+
+    <update id="updateStatus">
+        UPDATE pms_report SET status = #{status}, updated_at = NOW() WHERE id = #{id}
+    </update>
+
+    <select id="selectPendingReportByProductAndReporter" resultMap="ReportResultMap">
+        SELECT * FROM pms_report
+        WHERE product_id = #{productId}
+        AND reporter_id = #{reporterId}
+        AND status = 'PENDING'
+        LIMIT 1
+    </select>
+
+</mapper>

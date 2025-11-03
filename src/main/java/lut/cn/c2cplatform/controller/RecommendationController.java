@@ -97,13 +97,18 @@ public class RecommendationController {
                 return getCategoryBasedSimilarProducts(id, limit);
             }
 
-            // Get product details
+            // Get product details with media
             List<Product> products = productMapper.selectByIds(similarIds);
 
             // Filter out unavailable products and convert to DTO
             List<ProductDTO> productDTOs = products.stream()
                 .filter(p -> p.getStatus() == 1) // Only available products
-                .map(productService::convertToDTO)
+                .map(p -> {
+                    // Load full product with media
+                    Product fullProduct = productService.getProductById(p.getId());
+                    return fullProduct != null ? productService.convertToDTO(fullProduct) : null;
+                })
+                .filter(Objects::nonNull)
                 .limit(limit)
                 .collect(Collectors.toList());
 
@@ -176,9 +181,13 @@ public class RecommendationController {
                     if (product.getStatus() == 1 &&
                         !viewedProductIds.contains(product.getId()) &&
                         !product.getUserId().equals(userId)) {
-                        results.add(productService.convertToDTO(product));
-                        if (results.size() >= limit) {
-                            return results;
+                        // Load full product details with media
+                        Product fullProduct = productService.getProductById(product.getId());
+                        if (fullProduct != null) {
+                            results.add(productService.convertToDTO(fullProduct));
+                            if (results.size() >= limit) {
+                                return results;
+                            }
                         }
                     }
                 }
@@ -195,10 +204,18 @@ public class RecommendationController {
      */
     private List<ProductDTO> getPopularProducts(int limit) {
         try {
-            List<Product> products = productMapper.selectRecentProducts(limit);
+            List<Product> products = productMapper.selectRecentProducts(limit * 2); // Get more to randomize
+            // Shuffle and filter
+            Collections.shuffle(products);
             return products.stream()
                 .filter(p -> p.getStatus() == 1)
-                .map(productService::convertToDTO)
+                .limit(limit)
+                .map(p -> {
+                    // Load full product with media
+                    Product fullProduct = productService.getProductById(p.getId());
+                    return fullProduct != null ? productService.convertToDTO(fullProduct) : null;
+                })
+                .filter(Objects::nonNull)
                 .collect(Collectors.toList());
         } catch (Exception e) {
             System.err.println("Failed to get popular products: " + e.getMessage());
@@ -229,7 +246,12 @@ public class RecommendationController {
             return similarProducts.stream()
                 .filter(p -> !p.getId().equals(productId) && p.getStatus() == 1)
                 .limit(limit)
-                .map(productService::convertToDTO)
+                .map(p -> {
+                    // Load full product with media
+                    Product fullProduct = productService.getProductById(p.getId());
+                    return fullProduct != null ? productService.convertToDTO(fullProduct) : null;
+                })
+                .filter(Objects::nonNull)
                 .collect(Collectors.toList());
 
         } catch (Exception e) {
@@ -254,4 +276,3 @@ public class RecommendationController {
         return null;
     }
 }
-

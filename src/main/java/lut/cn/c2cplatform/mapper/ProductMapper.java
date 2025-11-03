@@ -24,5 +24,11 @@ public interface ProductMapper {
     List<Product> selectByIds(@Param("ids") List<Long> ids);
     List<Product> selectByCategory(@Param("category") String category);
     List<Product> selectRecentProducts(@Param("limit") int limit);
+
+    // 防止超卖：使用行锁查询商品
+    Product selectByIdForUpdate(@Param("id") Long id);
+
+    // 减少库存（返回影响的行数，如果为0说明库存不足）
+    int decreaseStock(@Param("id") Long id, @Param("quantity") Integer quantity);
 }
 

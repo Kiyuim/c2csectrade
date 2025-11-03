@@ -19,16 +19,48 @@
         SELECT * FROM pms_product WHERE id = #{id}
     </select>
     <select id="selectAll" resultMap="ProductResultMap">
-        SELECT * FROM pms_product WHERE status = 1 ORDER BY created_at DESC
+        SELECT * FROM pms_product WHERE status = 1 AND stock > 0 ORDER BY created_at DESC
     </select>
     <select id="selectByUserId" resultMap="ProductResultMap">
         SELECT * FROM pms_product WHERE user_id = #{userId} AND status = 1 ORDER BY created_at DESC
     </select>
     <select id="selectWithFilters" resultMap="ProductResultMap">
-        SELECT * FROM pms_product
-        WHERE status = 1
+        SELECT *,
         <if test="keyword != null and keyword != ''">
-            AND (name LIKE CONCAT('%', #{keyword}, '%') OR description LIKE CONCAT('%', #{keyword}, '%'))
+            <!-- 计算相关度分数：名称完全匹配 > 名称包含 > 描述包含 > 分类匹配 -->
+            (
+                CASE
+                    WHEN LOWER(name) = LOWER(#{keyword}) THEN 100
+                    WHEN LOWER(name) LIKE CONCAT(LOWER(#{keyword}), '%') THEN 80
+                    WHEN LOWER(name) LIKE CONCAT('%', LOWER(#{keyword}), '%') THEN 60
+                    ELSE 0
+                END +
+                CASE
+                    WHEN LOWER(description) LIKE CONCAT('%', LOWER(#{keyword}), '%') THEN 30
+                    ELSE 0
+                END +
+                CASE
+                    WHEN LOWER(category) LIKE CONCAT('%', LOWER(#{keyword}), '%') THEN 20
+                    ELSE 0
+                END
+            ) as relevance_score
+        </if>
+        <if test="keyword == null or keyword == ''">
+            0 as relevance_score
+        </if>
+        FROM pms_product
+        WHERE status = 1 AND stock > 0
+        <if test="keyword != null and keyword != ''">
+            AND (
+                <!-- 名称模糊搜索 -->
+                LOWER(name) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+                OR
+                <!-- 描述模糊搜索 -->
+                LOWER(description) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+                OR
+                <!-- 分类模糊搜索 -->
+                LOWER(category) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+            )
         </if>
         <if test="minPrice != null">
             AND price &gt;= #{minPrice}
@@ -45,7 +77,11 @@
         <if test="category != null and category != ''">
             AND FIND_IN_SET(category, #{category}) > 0
         </if>
-        ORDER BY created_at DESC
+        ORDER BY
+        <if test="keyword != null and keyword != ''">
+            relevance_score DESC,
+        </if>
+        created_at DESC
     </select>
     <insert id="insert" parameterType="lut.cn.c2cplatform.entity.Product" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO pms_product (user_id, name, description, price, stock, condition_level, location, category, status, created_at, updated_at)
@@ -68,12 +104,14 @@
             #{id}
         </foreach>
         AND status = 1
+        AND stock > 0
     </select>
 
     <select id="selectByCategory" resultMap="ProductResultMap">
         SELECT * FROM pms_product
         WHERE category = #{category}
         AND status = 1
+        AND stock > 0
         ORDER BY created_at DESC
         LIMIT 20
     </select>
@@ -81,7 +119,22 @@
     <select id="selectRecentProducts" resultMap="ProductResultMap">
         SELECT * FROM pms_product
         WHERE status = 1
+        AND stock > 0
         ORDER BY created_at DESC
         LIMIT #{limit}
     </select>
+
+    <!-- 使用行锁查询商品（防止超卖） -->
+    <select id="selectByIdForUpdate" resultMap="ProductResultMap">
+        SELECT * FROM pms_product WHERE id = #{id} FOR UPDATE
+    </select>
+
+    <!-- 减少库存（使用乐观锁，只有库存足够时才更新） -->
+    <update id="decreaseStock">
+        UPDATE pms_product
+        SET stock = stock - #{quantity},
+            updated_at = NOW()
+        WHERE id = #{id}
+        AND stock >= #{quantity}
+    </update>
 </mapper>

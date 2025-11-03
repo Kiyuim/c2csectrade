@@ -40,5 +40,20 @@ public class ChatMessageRepository {
     public int countUnreadMessagesBetweenUsers(Long recipientId, Long senderId) {
         return chatMessageMapper.countUnreadMessagesBetweenUsers(recipientId, senderId);
     }
-}
 
+    public List<ChatMessage> findSystemMessages(Long recipientId, int limit) {
+        return chatMessageMapper.findSystemMessages(recipientId, limit);
+    }
+
+    public void markSystemMessagesAsRead(Long recipientId) {
+        chatMessageMapper.markSystemMessagesAsRead(recipientId);
+    }
+
+    public ChatMessage findLastSystemMessage(Long recipientId) {
+        return chatMessageMapper.findLastSystemMessage(recipientId);
+    }
+
+    public int countUnreadSystemMessages(Long recipientId) {
+        return chatMessageMapper.countUnreadSystemMessages(recipientId);
+    }
+}

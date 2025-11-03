@@ -35,12 +35,20 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
             String token = authHeader.substring(7);
             try {
                 String username = jwtUtil.extractUsername(token);
+                System.out.println("[WS] User authenticated: " + username);
+
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(username, null, new ArrayList<>());
                 SecurityContextHolder.getContext().setAuthentication(authentication);
                 accessor.setUser(authentication);
+
+                // 确保Principal被保存到WebSocket会话中
+                accessor.setLeaveMutable(true);
+
+                System.out.println("[WS] User principal set for: " + username);
             } catch (Exception e) {
                 System.err.println("[WS] Authentication failed: " + e.getMessage());
+                e.printStackTrace();
                 throw new IllegalArgumentException("Unauthorized WebSocket CONNECT: invalid token");
             }
         }

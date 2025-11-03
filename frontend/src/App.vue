@@ -5,7 +5,10 @@
         <!-- 左侧用户头像下拉菜单 -->
         <div class="user-menu" @click="toggleUserMenu">
           <img :src="userAvatar" :alt="userDisplayName" class="user-avatar" />
-          <span class="username">{{ userDisplayName }}</span>
+          <div class="user-name-section">
+            <span class="username">{{ userDisplayName }}</span>
+            <CreditBadge v-if="authStore.user?.creditLevel" :level="authStore.user.creditLevel" />
+          </div>
           <div v-if="showUserMenu" class="dropdown-menu" @click.stop>
             <div class="dropdown-item" @click="changeAvatar">
               <span class="icon">👤</span> 更换头像
@@ -19,6 +22,9 @@
             </div>
             <div v-if="isAdmin" class="dropdown-item" @click="goToAdminChat">
               <span class="icon">📢</span> 系统消息
+            </div>
+            <div v-if="isAdmin" class="dropdown-item" @click="goToAdminReports">
+              <span class="icon">🚩</span> 举报管理
             </div>
             <div class="dropdown-divider"></div>
             <div class="dropdown-item logout" @click="handleLogout">
@@ -39,6 +45,109 @@
     <FloatingFavoritesButton v-if="isLoggedIn" />
     <!-- 购物车浮动按钮 -->
     <FloatingCartButton v-if="isLoggedIn" />
+    <!-- 举报管理浮动按钮（仅管理员可见） -->
+    <FloatingReportsButton v-if="isLoggedIn && isAdmin" />
+
+    <!-- 系统消息通知 -->
+    <SystemMessageNotification
+      v-for="(notification, index) in systemNotifications"
+      :key="notification.id"
+      :message="notification.message"
+      :duration="5000"
+      :style="{ top: `${80 + index * 120}px` }"
+      @close="removeNotification(notification.id)"
+    />
+
+    <!-- 头像更换对话框 -->
+    <div v-if="showAvatarDialog" class="avatar-dialog-overlay" @click="closeAvatarDialog">
+      <div class="avatar-dialog" @click.stop>
+        <div class="avatar-dialog-header">
+          <h3>更换头像</h3>
+          <button @click="closeAvatarDialog" class="close-dialog">×</button>
+        </div>
+        <div class="avatar-dialog-body">
+          <div class="avatar-option">
+            <label for="avatarFileInput" class="avatar-upload-btn">
+              📁 上传图片
+            </label>
+            <input
+              id="avatarFileInput"
+              type="file"
+              accept="image/*"
+              @change="handleAvatarUpload"
+              style="display: none;"
+            />
+          </div>
+          <div class="divider">或</div>
+          <div class="avatar-option">
+            <input
+              v-model="avatarUrlInput"
+              type="text"
+              placeholder="输入图片URL"
+              class="avatar-url-input"
+            />
+            <button @click="setAvatarByUrl" class="avatar-url-btn">设置头像</button>
+          </div>
+          <div class="avatar-option">
+            <button @click="resetToDefaultAvatar" class="avatar-default-btn">
+              恢复默认头像
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 用户名修改对话框 -->
+    <div v-if="showDisplayNameDialog" class="avatar-dialog-overlay" @click="closeDisplayNameDialog">
+      <div class="avatar-dialog" @click.stop>
+        <div class="avatar-dialog-header">
+          <h3>修改用户名</h3>
+          <button @click="closeDisplayNameDialog" class="close-dialog">×</button>
+        </div>
+        <div class="avatar-dialog-body">
+          <div class="inline-form-group">
+            <label class="form-label">
+              <span class="label-icon">👤</span>
+              当前用户名
+            </label>
+            <span class="name-badge">{{ userDisplayName }}</span>
+          </div>
+          <div class="inline-form-group">
+            <label class="form-label">
+              <span class="label-icon">✏️</span>
+              新用户名
+            </label>
+            <input
+              v-model="newDisplayName"
+              type="text"
+              placeholder="输入新用户名"
+              class="avatar-url-input inline-input"
+              maxlength="20"
+            />
+          </div>
+          <div class="name-rules">
+            <div class="rule-item">
+              <span class="rule-icon">📏</span>
+              <span>长度: 2-20个字符</span>
+            </div>
+            <div class="rule-item">
+              <span class="rule-icon">🚫</span>
+              <span>不包含敏感词汇</span>
+            </div>
+            <div class="rule-item">
+              <span class="rule-icon">✨</span>
+              <span>不与其他用户重复</span>
+            </div>
+          </div>
+          <div class="centered-actions">
+            <button @click="updateDisplayName" class="avatar-url-btn" :disabled="isUpdatingName">
+              <span v-if="isUpdatingName" class="spinner-small"></span>
+              {{ isUpdatingName ? '修改中...' : '确认修改' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -46,15 +155,22 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useAuthStore } from '@/store/auth';
 import { useRouter } from 'vue-router';
+import axios from 'axios';
+import emitter from '@/eventBus';
 import FloatingChatButton from '@/components/FloatingChatButton.vue';
 import FloatingPublishButton from '@/components/FloatingPublishButton.vue';
 import FloatingFavoritesButton from '@/components/FloatingFavoritesButton.vue';
 import FloatingCartButton from '@/components/FloatingCartButton.vue';
 import FloatingManageProductsButton from '@/components/FloatingManageProductsButton.vue';
+import FloatingReportsButton from '@/components/FloatingReportsButton.vue';
+import SystemMessageNotification from '@/components/SystemMessageNotification.vue';
+import CreditBadge from '@/components/CreditBadge.vue';
 
 const authStore = useAuthStore();
 const router = useRouter();
 const showUserMenu = ref(false);
+const systemNotifications = ref([]);
+let notificationId = 0;
 
 const isLoggedIn = computed(() => authStore.isLoggedIn);
 const currentUser = computed(() => authStore.user);
@@ -86,346 +202,247 @@ const goToAdminChat = () => {
   showUserMenu.value = false;
 };
 
-const closeUserMenu = () => {
+const goToAdminReports = () => {
+  router.push('/admin/reports');
   showUserMenu.value = false;
-};
-
-const changeDisplayName = () => {
-  // 创建用户名修改对话框
-  const dialog = document.createElement('div');
-  dialog.className = 'avatar-dialog-overlay';
-  dialog.innerHTML = `
-    <div class="avatar-dialog name-dialog">
-      <div class="avatar-dialog-header">
-        <h3>✏️ 修改显示名称</h3>
-        <button class="close-dialog">&times;</button>
-      </div>
-      <div class="avatar-dialog-body">
-        <div class="form-group inline-form-group">
-          <label class="form-label">
-            <span class="label-icon">👤</span>
-            当前用户名：
-          </label>
-          <span class="name-badge">${userDisplayName.value}</span>
-        </div>
-
-        <div class="form-group inline-form-group">
-          <label for="newDisplayName" class="form-label">
-            <span class="label-icon">✨</span>
-            新用户名：
-          </label>
-          <input
-            type="text"
-            id="newDisplayName"
-            class="avatar-url-input inline-input"
-            placeholder="请输入新的显示名称"
-            maxlength="20"
-          />
-          <div class="name-rules">
-            <div class="rule-item">
-              <span class="rule-icon">📏</span>
-              <span>长度：2-20个字符</span>
-            </div>
-            <div class="rule-item">
-              <span class="rule-icon">🔒</span>
-              <span>不能包含敏感词汇</span>
-            </div>
-            <div class="rule-item">
-              <span class="rule-icon">✅</span>
-              <span>不能与其他用户重复</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="form-actions centered-actions">
-          <button class="btn-confirm avatar-url-btn">
-            <span class="btn-icon">✓</span>
-            确认修改
-          </button>
-          <button class="btn-cancel avatar-default-btn">
-            <span class="btn-icon">✕</span>
-            取消
-          </button>
-        </div>
-
-        <div class="status-messages">
-          <div class="loading-message" style="display: none;">
-            <div class="spinner-small"></div>
-            <span>正在验证...</span>
-          </div>
-          <div class="error-message" style="display: none;"></div>
-        </div>
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(dialog);
-  const nameInput = dialog.querySelector('#newDisplayName');
-  nameInput.focus();
-
-  // 关闭对话框
-  const closeDialog = () => {
-    document.body.removeChild(dialog);
-    showUserMenu.value = false;
-  };
-
-  dialog.querySelector('.close-dialog').onclick = closeDialog;
-  dialog.querySelector('.btn-cancel').onclick = closeDialog;
-  dialog.onclick = (e) => {
-    if (e.target === dialog) closeDialog();
-  };
-
-  // 确认修改
-  dialog.querySelector('.btn-confirm').onclick = async () => {
-    const newName = nameInput.value.trim();
-    const loadingMsg = dialog.querySelector('.loading-message');
-    const errorMsg = dialog.querySelector('.error-message');
-
-    // 重置消息
-    loadingMsg.style.display = 'none';
-    errorMsg.style.display = 'none';
-
-    if (!newName) {
-      errorMsg.textContent = '请输入新用户名';
-      errorMsg.style.display = 'block';
-      return;
-    }
-
-    if (newName.length < 2 || newName.length > 20) {
-      errorMsg.textContent = '用户名长度必须在2-20个字符之间';
-      errorMsg.style.display = 'block';
-      return;
-    }
-
-    if (newName === userDisplayName.value) {
-      errorMsg.textContent = '新用户名与当前用户名相同';
-      errorMsg.style.display = 'block';
-      return;
-    }
-
-    loadingMsg.style.display = 'block';
-
-    try {
-      const token = localStorage.getItem('jwt_token');
-      const response = await fetch('/api/user/display-name', {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ displayName: newName })
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        // 更新用户名成功（不弹窗）
-        const user = JSON.parse(localStorage.getItem('user'));
-        user.displayName = newName;
-        localStorage.setItem('user', JSON.stringify(user));
-        // 更新store中的用户信息
-        authStore.updateUser({ displayName: newName });
-        closeDialog();
-      } else {
-        loadingMsg.style.display = 'none';
-        errorMsg.textContent = data.message || '修改失败，请重试';
-        errorMsg.style.display = 'block';
-      }
-    } catch (error) {
-      console.error('Update display name error:', error);
-      loadingMsg.style.display = 'none';
-      errorMsg.textContent = '网络错误，请重试';
-      errorMsg.style.display = 'block';
-    }
-  };
-
-  // 回车键确认
-  nameInput.onkeypress = (e) => {
-    if (e.key === 'Enter') {
-      dialog.querySelector('.btn-confirm').click();
-    }
-  };
-};
-
-const changeAvatar = () => {
-  // 创建一个隐藏的文件上传对话框
-  const dialog = document.createElement('div');
-  dialog.className = 'avatar-dialog-overlay';
-  dialog.innerHTML = `
-    <div class="avatar-dialog">
-      <div class="avatar-dialog-header">
-        <h3>更换头像</h3>
-        <button class="close-dialog">&times;</button>
-      </div>
-      <div class="avatar-dialog-body">
-        <div class="avatar-option">
-          <label class="avatar-upload-btn">
-            📁 选择本地图片上传
-            <input type="file" accept="image/*" class="avatar-file-input" style="display: none;">
-          </label>
-        </div>
-        <div class="divider">或</div>
-        <div class="avatar-option">
-          <input type="text" class="avatar-url-input" placeholder="输入图片URL地址" />
-          <button class="avatar-url-btn">🔗 使用URL</button>
-        </div>
-        <div class="avatar-option">
-          <button class="avatar-default-btn">🎨 使用默认头像</button>
-        </div>
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(dialog);
-
-  // 关闭对话框
-  const closeDialog = () => {
-    document.body.removeChild(dialog);
-    showUserMenu.value = false;
-  };
-
-  dialog.querySelector('.close-dialog').onclick = closeDialog;
-  dialog.onclick = (e) => {
-    if (e.target === dialog) closeDialog();
-  };
-
-  // 文件上传
-  dialog.querySelector('.avatar-file-input').onchange = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      // 验证文件类型
-      if (!file.type.startsWith('image/')) {
-        alert('请选择图片文件');
-        return;
-      }
-      // 验证文件大小 (最大5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        alert('图片大小不能超过5MB');
-        return;
-      }
-
-      try {
-        const token = localStorage.getItem('jwt_token');
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const response = await fetch('/api/user/avatar/upload', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
-          body: formData
-        });
-
-        const data = await response.json();
-        if (response.ok) {
-          // 更新用户信息（不弹窗）
-          const user = JSON.parse(localStorage.getItem('user'));
-          user.avatarUrl = data.avatarUrl;
-          localStorage.setItem('user', JSON.stringify(user));
-          // 同步更新authStore
-          authStore.updateUser({ avatarUrl: data.avatarUrl });
-          closeDialog();
-        } else {
-          alert('上传失败: ' + (data.message || data));
-        }
-      } catch (error) {
-        console.error('Upload error:', error);
-        alert('上传失败，请重试');
-      }
-      closeDialog();
-    }
-  };
-
-  // URL输入
-  dialog.querySelector('.avatar-url-btn').onclick = async () => {
-    const url = dialog.querySelector('.avatar-url-input').value.trim();
-    if (url) {
-      try {
-        const token = localStorage.getItem('jwt_token');
-        const response = await fetch('/api/user/avatar/url', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ avatarUrl: url })
-        });
-
-        const data = await response.json();
-        if (response.ok) {
-          // 更新用户信息（不弹窗）
-          const user = JSON.parse(localStorage.getItem('user'));
-          user.avatarUrl = data.avatarUrl;
-          localStorage.setItem('user', JSON.stringify(user));
-          // 同步更新authStore
-          authStore.updateUser({ avatarUrl: data.avatarUrl });
-          closeDialog();
-        } else {
-          alert('设置失败: ' + (data.message || data));
-        }
-      } catch (error) {
-        console.error('Set avatar error:', error);
-        alert('设置失败，请重试');
-      }
-      closeDialog();
-    } else {
-      alert('请输入有效的图片URL');
-    }
-  };
-
-  // 使用默认头像
-  dialog.querySelector('.avatar-default-btn').onclick = async () => {
-    try {
-      const token = localStorage.getItem('jwt_token');
-      const response = await fetch('/api/user/avatar/reset', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      const data = await response.json();
-      if (response.ok) {
-        // 更新用户信息（不弹窗）
-        const user = JSON.parse(localStorage.getItem('user'));
-        user.avatarUrl = null;
-        localStorage.setItem('user', JSON.stringify(user));
-        // 同步更新authStore
-        authStore.updateUser({ avatarUrl: null });
-        closeDialog();
-      } else {
-        alert('重置失败: ' + (data.message || data));
-      }
-    } catch (error) {
-      console.error('Reset avatar error:', error);
-      alert('重置失败，请重试');
-    }
-    closeDialog();
-  };
 };
 
 const handleLogout = () => {
   authStore.logout();
-  router.push('/login');
   showUserMenu.value = false;
+  router.push('/login');
 };
 
-// 点击外部关闭下拉菜单
+// 头像相关
+const showAvatarDialog = ref(false);
+const avatarUrlInput = ref('');
+
+const changeAvatar = () => {
+  showAvatarDialog.value = true;
+  showUserMenu.value = false;
+  avatarUrlInput.value = '';
+};
+
+const closeAvatarDialog = () => {
+  showAvatarDialog.value = false;
+  avatarUrlInput.value = '';
+};
+
+const handleAvatarUpload = async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  // 验证文件类型
+  if (!file.type.startsWith('image/')) {
+    alert('请选择图片文件');
+    return;
+  }
+
+  // 验证文件大小 (5MB)
+  if (file.size > 5 * 1024 * 1024) {
+    alert('图片大小不能超过5MB');
+    return;
+  }
+
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await axios.post('/api/users/avatar/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+
+    if (response.data.avatarUrl) {
+      authStore.updateUser({ avatarUrl: response.data.avatarUrl });
+      alert('头像上传成功！');
+      closeAvatarDialog();
+    }
+  } catch (error) {
+    console.error('上传头像失败:', error);
+    alert(error.response?.data || '上传失败，请重试');
+  }
+};
+
+const setAvatarByUrl = async () => {
+  if (!avatarUrlInput.value.trim()) {
+    alert('请输入图片URL');
+    return;
+  }
+
+  try {
+    const response = await axios.post('/api/users/avatar/url', {
+      avatarUrl: avatarUrlInput.value.trim()
+    });
+
+    if (response.data.avatarUrl) {
+      authStore.updateUser({ avatarUrl: response.data.avatarUrl });
+      alert('头像设置成功！');
+      closeAvatarDialog();
+    }
+  } catch (error) {
+    console.error('设置头像失败:', error);
+    alert(error.response?.data || '设置失败，请重试');
+  }
+};
+
+const resetToDefaultAvatar = async () => {
+  if (!confirm('确定要恢复默认头像吗？')) return;
+
+  try {
+    await axios.post('/api/users/avatar/reset');
+    authStore.updateUser({ avatarUrl: null });
+    alert('已恢复默认头像');
+    closeAvatarDialog();
+  } catch (error) {
+    console.error('重置头像失败:', error);
+    alert(error.response?.data || '重置失败，请重试');
+  }
+};
+
+// 用户名相关
+const showDisplayNameDialog = ref(false);
+const newDisplayName = ref('');
+const isUpdatingName = ref(false);
+
+const changeDisplayName = () => {
+  showDisplayNameDialog.value = true;
+  showUserMenu.value = false;
+  newDisplayName.value = '';
+};
+
+const closeDisplayNameDialog = () => {
+  showDisplayNameDialog.value = false;
+  newDisplayName.value = '';
+  isUpdatingName.value = false;
+};
+
+const updateDisplayName = async () => {
+  const trimmedName = newDisplayName.value.trim();
+
+  if (!trimmedName) {
+    alert('用户名不能为空');
+    return;
+  }
+
+  if (trimmedName.length < 2 || trimmedName.length > 20) {
+    alert('用户名长度必须在2-20个字符之间');
+    return;
+  }
+
+  isUpdatingName.value = true;
+
+  try {
+    const response = await axios.put('/api/users/display-name', {
+      displayName: trimmedName
+    });
+
+    if (response.data.displayName) {
+      authStore.updateUser({ displayName: response.data.displayName });
+      alert('用户名修改成功！');
+      closeDisplayNameDialog();
+    }
+  } catch (error) {
+    console.error('修改用户名失败:', error);
+    const errorMsg = error.response?.data?.message || error.response?.data || '修改失败，请重试';
+    alert(errorMsg);
+  } finally {
+    isUpdatingName.value = false;
+  }
+};
+
+// Close dropdown when clicking outside
 const handleClickOutside = (event) => {
-  const userMenu = document.querySelector('.user-menu');
-  if (userMenu && !userMenu.contains(event.target)) {
-    closeUserMenu();
+  if (!event.target.closest('.user-menu')) {
+    showUserMenu.value = false;
+  }
+};
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('click', handleClickOutside);
+}
+
+// 系统消息通知处理
+const addSystemNotification = (message) => {
+  const id = ++notificationId;
+  systemNotifications.value.push({
+    id,
+    message
+  });
+};
+
+const removeNotification = (id) => {
+  const index = systemNotifications.value.findIndex(n => n.id === id);
+  if (index > -1) {
+    systemNotifications.value.splice(index, 1);
+  }
+};
+
+// 监听系统消息
+const handleSystemMessage = (message) => {
+  console.log('[App] 收到消息:', message);
+  console.log('[App] 是系统消息:', message.isSystemMessage);
+  console.log('[App] 接收者:', message.recipient);
+  console.log('[App] 当前用户:', currentUser.value?.username);
+
+  // 只显示发给当前用户的系统消息
+  if (message.isSystemMessage && message.recipient === currentUser.value?.username) {
+    console.log('[App] ✅ 显示系统消息通知');
+    addSystemNotification(message.content);
+    // 播放通知音效（可选）
+    // new Audio('/notification.mp3').play().catch(() => {});
+  } else if (message.isSystemMessage) {
+    console.log('[App] ⚠️ 系统消息不是发给当前用户的，忽略');
+  }
+};
+
+// 检查并显示未读系统消息
+const checkUnreadSystemMessages = async () => {
+  if (!isLoggedIn.value) return;
+
+  try {
+    const token = localStorage.getItem('jwt_token');
+    if (!token) return;
+
+    // 获取未读系统消息
+    const response = await axios.get('/api/chat/history/系统', {
+      headers: { 'Authorization': `Bearer ${token}` },
+      params: { limit: 10 }
+    });
+
+    // 只显示未读的系统消息
+    const unreadSystemMessages = response.data.filter(msg => !msg.isRead && msg.isSystemMessage);
+
+    // 为每条未读系统消息显示通知
+    unreadSystemMessages.forEach((msg, index) => {
+      setTimeout(() => {
+        addSystemNotification(msg.content);
+      }, index * 500); // 每条消息间隔500ms显示，避免重叠
+    });
+
+    if (unreadSystemMessages.length > 0) {
+      console.log(`[App] 显示 ${unreadSystemMessages.length} 条未读系统消息`);
+    }
+  } catch (error) {
+    console.error('[App] 检查未读系统消息失败:', error);
   }
 };
 
 onMounted(() => {
-  document.addEventListener('click', handleClickOutside);
+  // 监听全局系统消息事件
+  emitter.on('chat-message', handleSystemMessage);
+
+  // 如果用户已登录，检查未读系统消息
+  if (isLoggedIn.value) {
+    checkUnreadSystemMessages();
+  }
 });
 
 onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside);
+  emitter.off('chat-message', handleSystemMessage);
 });
+
 </script>
 
 <style>
@@ -481,6 +498,12 @@ onUnmounted(() => {
   border-radius: 50%;
   margin-right: 10px;
   border: 2px solid #e0e0e0;
+}
+
+.user-name-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .username {

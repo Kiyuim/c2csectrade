@@ -21,5 +21,7 @@ public interface CartItemMapper {
     List<CartItem> selectByUserId(@Param("userId") Long userId);
 
     int countByUserId(@Param("userId") Long userId);
+
+    void deleteByUserId(@Param("userId") Long userId);
 }
 

@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="lut.cn.c2cplatform.mapper.BargainActivityMapper">
+
+    <resultMap id="BargainActivityResultMap" type="lut.cn.c2cplatform.entity.BargainActivity">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="productId" column="product_id"/>
+        <result property="originalPrice" column="original_price"/>
+        <result property="targetPrice" column="target_price"/>
+        <result property="currentPrice" column="current_price"/>
+        <result property="status" column="status"/>
+        <result property="expireTime" column="expire_time"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="username" column="username"/>
+        <result property="displayName" column="display_name"/>
+        <result property="productName" column="product_name"/>
+        <result property="productImage" column="product_image"/>
+        <result property="helpCount" column="help_count"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="lut.cn.c2cplatform.entity.BargainActivity" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO bargain_activity (user_id, product_id, original_price, target_price, current_price, status, expire_time, created_at, updated_at)
+        VALUES (#{userId}, #{productId}, #{originalPrice}, #{targetPrice}, #{currentPrice}, #{status}, #{expireTime}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <select id="selectById" resultMap="BargainActivityResultMap">
+        SELECT ba.*,
+               u.username,
+               u.display_name,
+               p.name as product_name,
+               (SELECT url FROM pms_product_media WHERE product_id = ba.product_id AND media_type = 1 LIMIT 1) as product_image,
+               (SELECT COUNT(*) FROM bargain_help WHERE bargain_id = ba.id) as help_count
+        FROM bargain_activity ba
+        LEFT JOIN users u ON ba.user_id = u.id
+        LEFT JOIN pms_product p ON ba.product_id = p.id
+        WHERE ba.id = #{id}
+    </select>
+
+    <select id="selectByUserId" resultMap="BargainActivityResultMap">
+        SELECT ba.*,
+               u.username,
+               u.display_name,
+               p.name as product_name,
+               (SELECT url FROM pms_product_media WHERE product_id = ba.product_id AND media_type = 1 LIMIT 1) as product_image,
+               (SELECT COUNT(*) FROM bargain_help WHERE bargain_id = ba.id) as help_count
+        FROM bargain_activity ba
+        LEFT JOIN users u ON ba.user_id = u.id
+        LEFT JOIN pms_product p ON ba.product_id = p.id
+        WHERE ba.user_id = #{userId}
+        ORDER BY ba.created_at DESC
+    </select>
+
+    <select id="selectByProductId" resultMap="BargainActivityResultMap">
+        SELECT ba.*,
+               u.username,
+               u.display_name,
+               p.name as product_name,
+               (SELECT url FROM pms_product_media WHERE product_id = ba.product_id AND media_type = 1 LIMIT 1) as product_image,
+               (SELECT COUNT(*) FROM bargain_help WHERE bargain_id = ba.id) as help_count
+        FROM bargain_activity ba
+        LEFT JOIN users u ON ba.user_id = u.id
+        LEFT JOIN pms_product p ON ba.product_id = p.id
+        WHERE ba.product_id = #{productId}
+        ORDER BY ba.created_at DESC
+    </select>
+
+    <update id="update" parameterType="lut.cn.c2cplatform.entity.BargainActivity">
+        UPDATE bargain_activity
+        SET current_price = #{currentPrice},
+            status = #{status},
+            updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateStatus">
+        UPDATE bargain_activity
+        SET status = #{status},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <select id="selectExpiredActivities" resultMap="BargainActivityResultMap">
+        SELECT * FROM bargain_activity
+        WHERE status = 'ACTIVE'
+        AND expire_time &lt; NOW()
+    </select>
+
+    <select id="selectActiveByUserAndProduct" resultMap="BargainActivityResultMap">
+        SELECT ba.*,
+               u.username,
+               u.display_name,
+               p.name as product_name,
+               (SELECT url FROM pms_product_media WHERE product_id = ba.product_id AND media_type = 1 LIMIT 1) as product_image,
+               (SELECT COUNT(*) FROM bargain_help WHERE bargain_id = ba.id) as help_count
+        FROM bargain_activity ba
+        LEFT JOIN users u ON ba.user_id = u.id
+        LEFT JOIN pms_product p ON ba.product_id = p.id
+        WHERE ba.user_id = #{userId}
+        AND ba.product_id = #{productId}
+        AND ba.status = 'ACTIVE'
+        LIMIT 1
+    </select>
+
+    <!-- 将商品的所有活跃砍价活动标记为失败 -->
+    <update id="markAllActiveAsFailed">
+        UPDATE bargain_activity
+        SET status = 'FAILED',
+            updated_at = NOW()
+        WHERE product_id = #{productId}
+        AND status IN ('ACTIVE', 'SUCCESS')
+    </update>
+
+</mapper>
+

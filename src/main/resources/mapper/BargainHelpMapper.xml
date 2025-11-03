@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="lut.cn.c2cplatform.mapper.BargainHelpMapper">
+
+    <resultMap id="BargainHelpResultMap" type="lut.cn.c2cplatform.entity.BargainHelp">
+        <id property="id" column="id"/>
+        <result property="bargainId" column="bargain_id"/>
+        <result property="helperId" column="helper_id"/>
+        <result property="helperName" column="helper_name"/>
+        <result property="cutAmount" column="cut_amount"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="helperAvatar" column="helper_avatar"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="lut.cn.c2cplatform.entity.BargainHelp" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO bargain_help (bargain_id, helper_id, helper_name, cut_amount, created_at)
+        VALUES (#{bargainId}, #{helperId}, #{helperName}, #{cutAmount}, #{createdAt})
+    </insert>
+
+    <select id="selectByBargainId" resultMap="BargainHelpResultMap">
+        SELECT bh.*,
+               u.avatar_url as helper_avatar
+        FROM bargain_help bh
+        LEFT JOIN users u ON bh.helper_id = u.id
+        WHERE bh.bargain_id = #{bargainId}
+        ORDER BY bh.created_at DESC
+    </select>
+
+    <select id="selectByBargainIdAndHelperId" resultMap="BargainHelpResultMap">
+        SELECT * FROM bargain_help
+        WHERE bargain_id = #{bargainId}
+        AND helper_id = #{helperId}
+        LIMIT 1
+    </select>
+
+    <select id="countByBargainId" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM bargain_help
+        WHERE bargain_id = #{bargainId}
+    </select>
+
+</mapper>
+

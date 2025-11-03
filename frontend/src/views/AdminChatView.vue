@@ -254,16 +254,27 @@ const sendSystemMessage = async () => {
 
 // 一键发送给所有人
 const sendSystemMessageToAll = async () => {
-  if (!systemMessage.value.trim()) return;
+  if (!systemMessage.value.trim() || sending.value) return;
+
+  if (!confirm(`确定要将此消息群发给所有 ${users.value.length} 位用户吗？`)) {
+    return;
+  }
+
   sending.value = true;
   try {
-    await axios.post('/api/message/broadcast', {
+    const token = localStorage.getItem('jwt_token');
+    const response = await axios.post('/api/message/broadcast', {
       message: systemMessage.value
+    }, {
+      headers: { Authorization: `Bearer ${token}` }
     });
-    toast('系统消息已群发给所有用户', 'success');
+
+    toast(response.data || '系统消息已群发给所有用户', 'success');
     systemMessage.value = '';
-  } catch (e) {
-    toast('群发失败', 'error');
+  } catch (error) {
+    console.error('群发失败:', error);
+    const errorMsg = error.response?.data || '群发失败';
+    toast(errorMsg, 'error');
   } finally {
     sending.value = false;
   }

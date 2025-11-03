@@ -114,12 +114,26 @@
             💬 联系卖家
           </button>
           <button
+            class="btn btn-warning btn-report"
+            @click="openReportModal"
+            v-if="!isOwnProduct">
+            🚩 举报
+          </button>
+          <button
             class="btn btn-secondary btn-favorite"
             @click="toggleFavorite"
             :class="{ 'is-favorite': isFavorite }">
             {{ isFavorite ? '❤️ 已收藏' : '🤍 收藏' }}
           </button>
-          <button class="btn btn-success btn-cart" @click="addToCart">🛒 加入购物车</button>
+          <button class="btn btn-success btn-cart" @click="addToCart" v-if="!isOwnProduct">
+            🛒 加入购物车
+          </button>
+          <button class="btn btn-bargain" @click="startBargain" v-if="!isOwnProduct">
+            🔪 砍价购买
+          </button>
+          <button class="btn btn-primary btn-buy" @click="buyNow" v-if="!isOwnProduct">
+            💳 立即购买
+          </button>
           <button
             v-if="authStore.user?.role === 'ROLE_ADMIN'"
             class="btn btn-danger btn-delete"
@@ -130,12 +144,34 @@
       </div>
     </div>
 
+    <!-- 卖家信用分 -->
+    <div v-if="sellerCreditScore" class="seller-section">
+      <h2>📊 卖家信用</h2>
+      <CreditScoreCard :creditScore="sellerCreditScore" />
+    </div>
+
+    <!-- 商品评价 -->
+    <div class="reviews-section">
+      <ProductReviews
+        :reviews="reviews"
+        :averageRating="averageRating"
+        :totalReviews="totalReviews"
+      />
+    </div>
+
+
     <!-- 相似商品推荐 -->
     <RecommendationSection
       v-if="similarProducts.length > 0"
       title="👀 看了又看"
       subtitle="其他用户也浏览过这些商品"
       :products="similarProducts"
+    />
+
+    <ReportModal
+      v-if="showReportModal"
+      :product-id="product.id"
+      @close="showReportModal = false"
     />
   </div>
   <div v-else class="loading-container">
@@ -153,6 +189,9 @@ import productService from '@/api/productService';
 import axios from 'axios';
 import { toast } from '@/services/toast';
 import RecommendationSection from '@/components/RecommendationSection.vue';
+import ReportModal from '@/components/ReportModal.vue';
+import ProductReviews from '@/components/ProductReviews.vue';
+import CreditScoreCard from '@/components/CreditScoreCard.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -161,6 +200,15 @@ const product = ref(null);
 const currentMediaIndex = ref(0);
 const similarProducts = ref([]);
 const isFavorite = ref(false);
+const showReportModal = ref(false);
+const reviews = ref([]);
+const averageRating = ref(0);
+const totalReviews = ref(0);
+const sellerCreditScore = ref(null);
+
+const openReportModal = () => {
+  showReportModal.value = true;
+};
 
 // Check if current user owns this product
 const isOwnProduct = computed(() => {
@@ -179,6 +227,7 @@ const nextMedia = () => {
     currentMediaIndex.value++;
   }
 };
+
 
 // 切换到上一个媒体
 const previousMedia = () => {
@@ -209,8 +258,41 @@ const fetchProduct = async () => {
 
     // 检查是否已收藏
     await checkFavoriteStatus();
+
+    // 获取商品评价
+    await fetchProductReviews();
+
+    // 获取卖家信用分
+    await fetchSellerCreditScore();
   } catch (error) {
     console.error('获取商品详情失败:', error);
+  }
+};
+
+// 获取商品评价
+const fetchProductReviews = async () => {
+  try {
+    const response = await axios.get(`/api/reviews/product/${route.params.id}`);
+    if (response.data.success) {
+      reviews.value = response.data.reviews;
+      averageRating.value = response.data.averageRating;
+      totalReviews.value = response.data.totalReviews;
+    }
+  } catch (error) {
+    console.error('获取评价失败:', error);
+  }
+};
+
+// 获取卖家信用分
+const fetchSellerCreditScore = async () => {
+  if (!product.value?.userId) return;
+  try {
+    const response = await axios.get(`/api/credit-score/${product.value.userId}`);
+    if (response.data.success) {
+      sellerCreditScore.value = response.data.data;
+    }
+  } catch (error) {
+    console.error('获取卖家信用分失败:', error);
   }
 };
 
@@ -305,6 +387,89 @@ const addToCart = async () => {
   } catch (error) {
     console.error('加入购物车失败:', error);
     toast('加入购物车失败，请重试', 'error');
+  }
+};
+
+// 立即购买
+const buyNow = async () => {
+  // 检查是否是自己的商品
+  if (isOwnProduct.value) {
+    toast('不能购买自己的商品', 'warning');
+    return;
+  }
+
+  if (!authStore.isLoggedIn) {
+    toast('请先登录', 'warning');
+    router.push('/login');
+    return;
+  }
+
+  // 检查库存
+  if (!product.value || product.value.stock < 1) {
+    toast('商品库存不足', 'warning');
+    return;
+  }
+
+  try {
+    // 检查是否有未完成的订单
+    const checkResponse = await axios.get('/api/orders/check-pending');
+    if (checkResponse.data.hasPendingOrder) {
+      const orderId = checkResponse.data.orderId;
+      if (confirm('您有未完成的订单，是否前往支付？')) {
+        router.push(`/payment/${orderId}`);
+      }
+      return;
+    }
+
+    // 创建订单（直接购买单个商品）
+    const response = await axios.post('/api/orders/buy-now', {
+      productId: route.params.id,
+      quantity: 1
+    });
+
+    const order = response.data;
+    toast('订单创建成功', 'success');
+
+    // 跳转到支付页面（使用路径参数）
+    router.push(`/payment/${order.id}`);
+  } catch (error) {
+    console.error('创建订单失败:', error);
+    if (error.response?.data?.message) {
+      toast(error.response.data.message, 'error');
+    } else {
+      toast('创建订单失败，请重试', 'error');
+    }
+  }
+};
+
+// 发起砍价
+const startBargain = async () => {
+  if (!authStore.isLoggedIn) {
+    toast('请先登录', 'warning');
+    router.push('/login');
+    return;
+  }
+
+  if (isOwnProduct.value) {
+    toast('不能对自己的商品发起砍价', 'warning');
+    return;
+  }
+
+  try {
+    const response = await axios.post('/api/bargain/start', {
+      productId: route.params.id
+    });
+    const bargainActivity = response.data;
+    toast('砍价活动创建成功', 'success');
+    // 跳转到砍价页面
+    router.push(`/bargain/${bargainActivity.id}`);
+  } catch (error) {
+    console.error('发起砍价失败:', error);
+    if (error.response?.data?.message) {
+      toast(error.response.data.message, 'error');
+    } else {
+      toast('发起砍价失败，请重试', 'error');
+    }
   }
 };
 
@@ -664,6 +829,36 @@ onUnmounted(() => {
   background: #218838;
 }
 
+.btn-bargain {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+  color: white;
+  box-shadow: 0 4px 6px rgba(255, 107, 107, 0.3);
+}
+
+.btn-bargain:hover {
+  background: linear-gradient(135deg, #ff5252 0%, #ff7e43 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(255, 107, 107, 0.4);
+}
+
+.btn-warning {
+  background: #ffc107;
+  color: #212529;
+}
+
+.btn-warning:hover {
+  background: #e0a800;
+}
+
+.btn-danger {
+  background: #dc3545;
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #c82333;
+}
+
 /* 加载状态 */
 .loading-container {
   display: flex;
@@ -671,6 +866,22 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   height: 400px;
+}
+
+.seller-section {
+  margin: 40px 0;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 10px;
+}
+
+.seller-section h2 {
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.reviews-section {
+  margin: 40px 0;
 }
 
 .loading-spinner {

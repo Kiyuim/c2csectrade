@@ -14,6 +14,13 @@ import FavoritesView from '../views/FavoritesView.vue';
 import CartView from '../views/CartView.vue';
 import UserProductsView from '../views/UserProductsView.vue';
 import ProductManageView from '../views/ProductManageView.vue';
+import AdminReports from '../views/AdminReports.vue';
+import OrderHistory from '../views/OrderHistory.vue';
+import PaymentView from '../views/PaymentView.vue';
+import PaymentResult from '../views/PaymentResult.vue';
+import PaymentPasswordSetup from '../views/PaymentPasswordSetup.vue';
+import BargainView from '../views/BargainView.vue';
+import ReviewView from '../views/ReviewView.vue';
 
 // ===== 定义路由规则 =====
 const routes = [
@@ -92,6 +99,48 @@ const routes = [
         path: '/products/manage',
         name: 'product-manage',
         component: ProductManageView,
+        meta: { requiresAuth: true },
+    },
+    {
+        path: '/admin/reports',
+        name: 'admin-reports',
+        component: AdminReports,
+        meta: { requiresAuth: true, requiresAdmin: true },
+    },
+    {
+        path: '/order-history',
+        name: 'order-history',
+        component: OrderHistory,
+        meta: { requiresAuth: true },
+    },
+    {
+        path: '/payment/:orderId',
+        name: 'payment',
+        component: PaymentView,
+        meta: { requiresAuth: true },
+    },
+    {
+        path: '/payment-result',
+        name: 'payment-result',
+        component: PaymentResult,
+        meta: { requiresAuth: true },
+    },
+    {
+        path: '/payment-password/setup',
+        name: 'payment-password-setup',
+        component: PaymentPasswordSetup,
+        meta: { requiresAuth: true },
+    },
+    {
+        path: '/bargain/:id',
+        name: 'bargain',
+        component: BargainView,
+        meta: { requiresAuth: false }, // 砍价页面可以分享，不需要登录也能查看
+    },
+    {
+        path: '/review/:orderId',
+        name: 'review',
+        component: ReviewView,
         meta: { requiresAuth: true },
     },
     {

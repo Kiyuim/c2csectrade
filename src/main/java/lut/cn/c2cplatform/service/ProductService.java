@@ -56,26 +56,26 @@ public class ProductService {
             eventPublisher.publishEvent(new ProductCreatedEvent(this, product));
 
             return product;
-        } catch (Exception e) {
-            System.err.println("创建商品失败: " + e.getMessage());
-            e.printStackTrace();
-
-            // 异常补偿：删除已上传的文件
-            for (String url : uploadedUrls) {
-                try {
-                    String bucket = minioProperties.getBucketName();
-                    int idx = url.indexOf(bucket + "/");
-                    String objectName = idx >= 0 ? url.substring(idx + bucket.length() + 1) : null;
-                    if (objectName != null) {
-                        fileStorageService.deleteFile(objectName);
+                } catch (Exception e) {
+                    System.err.println("创建商品失败: " + e.getMessage());
+                    e.printStackTrace();
+        
+                    // 异常补偿：删除已上传的文件
+                    for (String url : uploadedUrls) {
+                        try {
+                            String bucket = minioProperties.getBucketName();
+                            int idx = url.indexOf(bucket + "/");
+                            String objectName = idx >= 0 ? url.substring(idx + bucket.length() + 1) : null;
+                            if (objectName != null) {
+                                fileStorageService.deleteFile(objectName);
+                            }
+                        } catch (Exception deleteException) {
+                            System.err.println("清理上传文件失败: " + deleteException.getMessage());
+        
+                        }
                     }
-                } catch (Exception deleteException) {
-                    System.err.println("清理上传文件失败: " + deleteException.getMessage());
-
+                    throw new RuntimeException("创建商品失败: " + e.getMessage(), e);
                 }
-            }
-            throw new RuntimeException("创建商品失败: " + e.getMessage(), e);
-        }
     }
 
     @Transactional
@@ -261,6 +261,14 @@ public class ProductService {
 
     public void deleteProduct(Long id) {
         productMapper.deleteById(id);
+    }
+
+    public void delistProduct(Long id) {
+        Product product = productMapper.selectById(id);
+        if (product != null) {
+            product.setStatus(0);
+            productMapper.update(product);
+        }
     }
 
     /**

@@ -27,27 +27,24 @@
         v-model="newMessage"
         placeholder="输入消息..."
         class="message-input"
-        :disabled="!isConnected"
       />
       <button
         type="submit"
         class="send-btn"
-        :disabled="!newMessage.trim() || !isConnected"
+        :disabled="!newMessage.trim()"
       >
         发送
       </button>
     </form>
 
-    <div v-if="!isConnected" class="connection-status">
-      连接中...
-    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick, watch, defineProps } from 'vue';
-import WebSocketService from '@/services/WebSocketService';
 import { chatService } from '@/services/chatService';
+import emitter from '@/eventBus';
+import WebSocketService from '@/services/WebSocketService';
 
 const props = defineProps({
   recipientUsername: {
@@ -68,7 +65,6 @@ const displayName = computed(() => props.recipientDisplayName || props.recipient
 
 const messages = ref([]);
 const newMessage = ref('');
-const isConnected = ref(false);
 const messagesArea = ref(null);
 
 // 格式化时间
@@ -110,25 +106,41 @@ const loadHistory = async () => {
 };
 
 // 接收到新消息的回调
-const onMessageReceived = (payload) => {
-  const message = JSON.parse(payload.body);
+const onMessageReceived = (message) => {
+  console.log('[ChatWindow] 收到消息:', message);
+  console.log('[ChatWindow] 当前用户:', props.currentUsername);
+  console.log('[ChatWindow] 当前对话用户:', props.recipientUsername);
+  console.log('[ChatWindow] 消息是系统消息吗:', message.isSystemMessage);
 
-  // 只添加与当前对话相关的消息
-  if (message.sender === props.recipientUsername ||
-      message.recipient === props.recipientUsername) {
-    messages.value.push(message);
-    scrollToBottom();
+  // 系统消息：只显示给接收者本人（不限制对话窗口）
+  if (message.isSystemMessage) {
+    console.log('[ChatWindow] 这是系统消息，接收者:', message.recipient, '当前用户:', props.currentUsername);
+    // 只有当系统消息的接收者是当前用户时才显示
+    if (message.recipient === props.currentUsername) {
+      console.log('[ChatWindow] ✅ 系统消息接收者匹配，添加到消息列表');
+      messages.value.push(message);
+      scrollToBottom();
+    } else {
+      console.log('[ChatWindow] ⚠️ 系统消息接收者不匹配，忽略消息');
+    }
+  } else {
+    // 普通消息：只添加与当前对话相关的消息
+    if (message.sender === props.recipientUsername || message.recipient === props.recipientUsername) {
+      console.log('[ChatWindow] 显示普通消息');
+      messages.value.push(message);
+      scrollToBottom();
 
-    // 如果是接收到的消息，标记为已读
-    if (message.sender === props.recipientUsername) {
-      chatService.markAsRead(props.recipientUsername);
+      // 如果是接收到的消息，标记为已读
+      if (message.sender === props.recipientUsername) {
+        chatService.markAsRead(props.recipientUsername);
+      }
     }
   }
 };
 
 // 发送消息
 const sendMessage = () => {
-  if (newMessage.value.trim() && isConnected.value) {
+  if (newMessage.value.trim()) {
     const chatMessage = {
       sender: props.currentUsername,
       recipient: props.recipientUsername,
@@ -149,22 +161,11 @@ watch(() => props.recipientUsername, () => {
 
 onMounted(() => {
   loadHistory();
-
-  // 连接WebSocket
-  if (!WebSocketService.isConnected()) {
-    WebSocketService.connect(onMessageReceived);
-    setTimeout(() => {
-      isConnected.value = WebSocketService.isConnected();
-    }, 1000);
-  } else {
-    isConnected.value = true;
-    WebSocketService.connect(onMessageReceived);
-  }
+  emitter.on('chat-message', onMessageReceived);
 });
 
 onUnmounted(() => {
-  // 不在这里断开连接，因为可能还有其他组件在使用
-  // WebSocketService.disconnect();
+  emitter.off('chat-message', onMessageReceived);
 });
 </script>
 
@@ -378,4 +379,3 @@ onUnmounted(() => {
   border-top: 1px solid #ffeeba;
 }
 </style>
-}

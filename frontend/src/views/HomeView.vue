@@ -1,6 +1,33 @@
 <template>
   <div class="home">
-    <h1>🛒 二手物品交易平台</h1>
+    <div class="header-section">
+      <div class="header-top" v-if="!isAdmin">
+        <div class="quick-actions-left">
+          <button @click="goToOrderHistory" class="action-btn order-btn" title="查看订单">
+            📦 我的订单
+            <span v-if="pendingOrderCount > 0" class="badge">{{ pendingOrderCount }}</span>
+          </button>
+          <button @click="goToPaymentPasswordSetup" class="action-btn payment-btn" :title="hasPaymentPassword ? '修改支付密码' : '设置支付密码'">
+            🔐 {{ hasPaymentPassword ? '修改支付密码' : '设置支付密码' }}
+          </button>
+        </div>
+        <div class="user-info-bar" v-if="isLoggedIn">
+          <div class="user-name-display">
+            <span class="user-greeting">👋 您好，{{ authStore.user?.displayName || authStore.user?.username }}</span>
+            <CreditBadge v-if="authStore.user?.creditLevel" :level="authStore.user.creditLevel" />
+          </div>
+          <div class="balance-display">
+            <span class="balance-label">💰 余额：</span>
+            <span class="balance-amount">¥{{ userBalance.toFixed(2) }}</span>
+          </div>
+        </div>
+      </div>
+      <h1>🛒 二手物品交易平台</h1>
+      <div v-if="isAdmin" class="admin-notice">
+        <span class="admin-badge">👑 管理员模式</span>
+        <p class="admin-text">您正在以管理员身份浏览，专注于平台管理功能</p>
+      </div>
+    </div>
 
     <!-- 搜索和筛选区域 -->
     <div class="search-section">
@@ -9,7 +36,7 @@
             v-model="searchKeyword"
             @input="handleSearch"
             type="text"
-            placeholder="搜索商品名称或描述..."
+            placeholder="🔍 智能搜索：输入关键词即可模糊匹配商品名称、描述、分类..."
             class="search-input"
         />
         <button @click="performSearch" class="search-btn">🔍 搜索</button>
@@ -181,17 +208,22 @@ import { useAuthStore } from '@/store/auth';
 import productService from '@/api/productService';
 import { categories } from '@/utils/categoryData';
 import RecommendationSection from '@/components/RecommendationSection.vue';
+import CreditBadge from '@/components/CreditBadge.vue';
 import axios from 'axios';
 
 const router = useRouter();
 const authStore = useAuthStore();
 
 const isLoggedIn = computed(() => authStore.isLoggedIn);
+const isAdmin = computed(() => authStore.user?.role === 'ROLE_ADMIN');
 
 const products = ref([]);
 const recommendedProducts = ref([]);
 const loading = ref(false);
 const searchKeyword = ref('');
+const hasPaymentPassword = ref(false);
+const userBalance = ref(0);
+const pendingOrderCount = ref(0);
 const filters = ref({
   minPrice: null,
   maxPrice: null,
@@ -466,6 +498,55 @@ const goToProduct = (productId) => {
   router.push(`/products/${productId}`);
 };
 
+const goToOrderHistory = () => {
+  router.push('/order-history');
+};
+
+const goToPaymentPasswordSetup = () => {
+  router.push('/payment-password/setup');
+};
+
+// 检查支付密码状态
+const checkPaymentPasswordStatus = async () => {
+  if (!isLoggedIn.value || isAdmin.value) return;
+  try {
+    const response = await axios.get('/api/users/payment-password/check');
+    hasPaymentPassword.value = response.data.hasPaymentPassword;
+  } catch (error) {
+    console.error('检查支付密码状态失败:', error);
+  }
+};
+
+// 获取用户余额
+const fetchUserBalance = async () => {
+  if (!isLoggedIn.value || isAdmin.value) return;
+  try {
+    const response = await axios.get('/api/users/me');
+    userBalance.value = response.data.balance || 0;
+  } catch (error) {
+    console.error('获取用户余额失败:', error);
+  }
+};
+
+// 获取未完成订单数量
+const fetchPendingOrderCount = async () => {
+  if (!isLoggedIn.value || isAdmin.value) return;
+  try {
+    const response = await axios.get('/api/orders');
+    const orders = response.data;
+    // 统计待支付订单数量（未过期的）
+    pendingOrderCount.value = orders.filter(order => {
+      if (order.status !== 'PENDING') return false;
+      if (!order.expireTime) return true;
+      const now = new Date().getTime();
+      const expireTime = new Date(order.expireTime).getTime();
+      return now < expireTime;
+    }).length;
+  } catch (error) {
+    console.error('获取订单数量失败:', error);
+  }
+};
+
 // Fetch personalized recommendations
 const fetchRecommendations = async () => {
   try {
@@ -482,6 +563,9 @@ const fetchRecommendations = async () => {
 onMounted(() => {
   fetchProducts();
   fetchRecommendations();
+  checkPaymentPasswordStatus();
+  fetchUserBalance();
+  fetchPendingOrderCount();
 });
 </script>
 
@@ -492,11 +576,156 @@ onMounted(() => {
   padding: 20px;
 }
 
-h1 {
-  text-align: center;
-  color: #333;
+.header-section {
+  display: flex;
+  flex-direction: column;
   margin-bottom: 30px;
+  gap: 20px;
+}
+
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.quick-actions-left {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+h1 {
+  color: #333;
   font-size: 2.5em;
+  margin: 0;
+  text-align: center;
+}
+
+.user-info-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.user-name-display {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-greeting {
+  color: white;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.balance-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.balance-label {
+  color: white;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.balance-amount {
+  color: #ffd700;
+  font-size: 24px;
+  font-weight: bold;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.admin-notice {
+  text-align: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+  border: 2px solid #f0c419;
+}
+
+.admin-badge {
+  font-size: 20px;
+  font-weight: bold;
+  color: #333;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.admin-text {
+  font-size: 14px;
+  color: #666;
+  margin: 0;
+}
+
+.action-btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 600;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  position: relative;
+}
+
+.badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #ff4d4f;
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 20px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(255, 77, 79, 0.4);
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.order-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.order-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.payment-btn {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+}
+
+.payment-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(245, 87, 108, 0.4);
 }
 
 .search-section {
@@ -896,14 +1125,32 @@ h1 {
 }
 
 @media (max-width: 768px) {
+  .header-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  h1 {
+    font-size: 1.8em;
+    text-align: center;
+  }
+
+  .quick-actions {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .action-btn {
+    flex: 1;
+    justify-content: center;
+    min-width: 140px;
+  }
+
   .product-grid {
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 15px;
   }
 
-  h1 {
-    font-size: 1.8em;
-  }
 
   .filter-row {
     grid-template-columns: 1fr;

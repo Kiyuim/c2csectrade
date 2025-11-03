@@ -140,6 +140,8 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useAuthStore } from '@/store/auth';
 import ChatWindow from '@/views/ChatWindow.vue';
 import axios from 'axios';
+import WebSocketService from '@/services/WebSocketService';
+import emitter from '@/eventBus';
 
 const authStore = useAuthStore();
 const showChat = ref(false);
@@ -153,6 +155,45 @@ const filteredUsers = ref([]);
 const userSearchKeyword = ref('');
 const currentUsername = ref('');
 let refreshInterval = null;
+
+// WebSocket connection
+const onMessageReceived = (payload) => {
+  try {
+    console.log('[WS] 收到消息:', payload.body);
+    const message = JSON.parse(payload.body);
+    console.log('[WS] 解析后的消息:', message);
+
+    // 发射消息事件，供ChatWindow接收
+    emitter.emit('chat-message', message);
+
+    // 刷新会话列表以更新未读数
+    if (!isAdmin.value || (isAdmin.value && !currentChatUser.value)) {
+      loadConversations();
+    }
+  } catch (error) {
+    console.error('[WS] 处理消息失败:', error);
+  }
+};
+
+onMounted(() => {
+  if (authStore.isLoggedIn) {
+    WebSocketService.connect(onMessageReceived);
+    getCurrentUser();
+    if (!isAdmin.value) {
+      loadConversations();
+      startRefreshInterval();
+    }
+  }
+
+  // 监听全局打开聊天事件
+  window.addEventListener('open-chat', handleOpenChatEvent);
+});
+
+onUnmounted(() => {
+  WebSocketService.disconnect();
+  stopRefreshInterval();
+  window.removeEventListener('open-chat', handleOpenChatEvent);
+});
 
 // 判断是否是管理员
 const isAdmin = computed(() => {

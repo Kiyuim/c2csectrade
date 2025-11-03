@@ -13,7 +13,9 @@ public class User implements Serializable {
     private String displayName;
     private String email;
     private String passwordHash;
+    private String paymentPasswordHash;
     private String avatarUrl;
+    private java.math.BigDecimal balance; // 用户余额
     private Instant createdAt;
     private Instant updatedAt;
     private Set<Role> roles;

@@ -115,9 +115,28 @@ public class ProductController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> deleteProduct(@PathVariable Long id) {
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> deleteProduct(@PathVariable Long id, Authentication authentication) {
         try {
+            Long userId = extractUserId(authentication);
+            if (userId == null) {
+                return new ResponseEntity<>("无法获取用户信息", HttpStatus.UNAUTHORIZED);
+            }
+
+            // Verify ownership or admin role
+            Product existingProduct = productService.getProductById(id);
+            if (existingProduct == null) {
+                return new ResponseEntity<>("商品不存在", HttpStatus.NOT_FOUND);
+            }
+
+            // Check if user is admin or product owner
+            boolean isAdmin = authentication.getAuthorities().stream()
+                    .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
+
+            if (!existingProduct.getUserId().equals(userId) && !isAdmin) {
+                return new ResponseEntity<>("无权限删除此商品", HttpStatus.FORBIDDEN);
+            }
+
             productService.deleteProduct(id);
             return ResponseEntity.ok("Product deleted successfully");
         } catch (Exception e) {

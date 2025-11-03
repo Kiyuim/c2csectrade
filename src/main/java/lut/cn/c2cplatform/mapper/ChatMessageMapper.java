@@ -26,5 +26,13 @@ public interface ChatMessageMapper {
 
     int countUnreadMessagesBetweenUsers(@Param("recipientId") Long recipientId,
                                        @Param("senderId") Long senderId);
-}
 
+    List<ChatMessage> findSystemMessages(@Param("recipientId") Long recipientId,
+                                         @Param("limit") int limit);
+
+    void markSystemMessagesAsRead(@Param("recipientId") Long recipientId);
+
+    ChatMessage findLastSystemMessage(@Param("recipientId") Long recipientId);
+
+    int countUnreadSystemMessages(@Param("recipientId") Long recipientId);
+}

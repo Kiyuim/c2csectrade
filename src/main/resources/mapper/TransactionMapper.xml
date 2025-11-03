@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="lut.cn.c2cplatform.mapper.TransactionMapper">
+    <insert id="insert">
+        INSERT INTO transactions (order_id, amount, transaction_type, payment_method, status, created_at)
+        VALUES (#{orderId}, #{amount}, #{transactionType}, #{paymentMethod}, #{status}, #{createdAt})
+    </insert>
+</mapper>
