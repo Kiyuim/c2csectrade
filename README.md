@@ -107,7 +107,7 @@ c2csectrade 是一个功能完善的C2C（用户对用户）二手商品交易�
 3.  **启动服务**
     使用Docker Compose一键启动所有服务（包括Nginx, Spring Boot, MySQL, MinIO）。
     ```bash
-    docker-compose up --build
+    docker compose up --build
     ```
     `--build`参数会确保Docker镜像基于最新的代码进行构建。
 
