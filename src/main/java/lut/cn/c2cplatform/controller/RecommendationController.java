@@ -7,6 +7,7 @@ import lut.cn.c2cplatform.security.UserDetailsImpl;
 import lut.cn.c2cplatform.service.HistoryService;
 import lut.cn.c2cplatform.service.ProductService;
 import lut.cn.c2cplatform.service.RecommendationEngineService;
+import lut.cn.c2cplatform.service.HybridRecommendationService;
 import lut.cn.c2cplatform.service.SearchService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -27,6 +28,9 @@ public class RecommendationController {
 
     @Autowired
     private RecommendationEngineService recommendationEngine;
+
+    @Autowired
+    private HybridRecommendationService hybridService;
 
     @Autowired
     private HistoryService historyService;
@@ -74,14 +78,13 @@ public class RecommendationController {
 
         } catch (Exception e) {
             System.err.println("Failed to get personalized recommendations: " + e.getMessage());
-            e.printStackTrace();
             return ResponseEntity.status(500).body(Map.of("error", "Failed to get recommendations"));
         }
     }
 
     /**
      * Get similar products for a specific product (看了又看/相似商品)
-     * Based on collaborative filtering
+     * Based on hybrid recommendation (CF + content + popularity)
      */
     @GetMapping("/products/{id}/similar")
     public ResponseEntity<?> getSimilarProducts(
@@ -89,10 +92,10 @@ public class RecommendationController {
             @RequestParam(defaultValue = "10") int limit) {
 
         try {
-            // Get similar product IDs from recommendation engine
-            List<Long> similarIds = recommendationEngine.getSimilarProducts(id, limit);
+            // Get hybrid recommendations (combines CF, content-based, and popularity)
+            List<Long> similarIds = hybridService.getHybridSimilarProducts(id, limit * 2);
 
-            if (similarIds.isEmpty()) {
+            if (similarIds == null || similarIds.isEmpty()) {
                 // No pre-computed recommendations, fallback to category-based
                 return getCategoryBasedSimilarProducts(id, limit);
             }
@@ -122,7 +125,6 @@ public class RecommendationController {
 
         } catch (Exception e) {
             System.err.println("Failed to get similar products: " + e.getMessage());
-            e.printStackTrace();
             return ResponseEntity.status(500).body(Map.of("error", "Failed to get similar products"));
         }
     }
@@ -167,7 +169,7 @@ public class RecommendationController {
                                 }
                             })
                             .filter(p -> p != null)
-                            .collect(java.util.stream.Collectors.toList());
+                            .collect(Collectors.toList());
                     } catch (Exception e) {
                         System.err.println("Elasticsearch search failed, falling back to database: " + e.getMessage());
                         products = productMapper.selectByCategory(tag);
@@ -204,14 +206,12 @@ public class RecommendationController {
      */
     private List<ProductDTO> getPopularProducts(int limit) {
         try {
-            List<Product> products = productMapper.selectRecentProducts(limit * 2); // Get more to randomize
-            // Shuffle and filter
+            List<Product> products = productMapper.selectRecentProducts(limit * 2);
             Collections.shuffle(products);
             return products.stream()
                 .filter(p -> p.getStatus() == 1)
                 .limit(limit)
                 .map(p -> {
-                    // Load full product with media
                     Product fullProduct = productService.getProductById(p.getId());
                     return fullProduct != null ? productService.convertToDTO(fullProduct) : null;
                 })
@@ -247,7 +247,6 @@ public class RecommendationController {
                 .filter(p -> !p.getId().equals(productId) && p.getStatus() == 1)
                 .limit(limit)
                 .map(p -> {
-                    // Load full product with media
                     Product fullProduct = productService.getProductById(p.getId());
                     return fullProduct != null ? productService.convertToDTO(fullProduct) : null;
                 })
@@ -276,3 +275,4 @@ public class RecommendationController {
         return null;
     }
 }
+

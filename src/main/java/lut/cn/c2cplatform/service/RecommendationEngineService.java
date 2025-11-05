@@ -2,6 +2,7 @@ package lut.cn.c2cplatform.service;
 
 import lut.cn.c2cplatform.mapper.ProductMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -20,11 +21,20 @@ public class RecommendationEngineService {
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
+    @Lazy
     @Autowired
     private HistoryService historyService;
 
     @Autowired
     private ProductMapper productMapper;
+
+    @Lazy
+    @Autowired
+    private ContentBasedRecommendationService contentBasedService;
+
+    @Lazy
+    @Autowired
+    private HybridRecommendationService hybridService;
 
     private static final String RECOMMEND_KEY_PREFIX = "recommend:item-cf:";
     private static final int TOP_N_SIMILAR = 10; // Store top 10 similar products
@@ -55,8 +65,18 @@ public class RecommendationEngineService {
             storeRecommendations(similarityMatrix);
 
             long duration = System.currentTimeMillis() - startTime;
-            System.out.println("=== Recommendation computation completed in " + duration + "ms ===");
+            System.out.println("=== Collaborative Filtering computation completed in " + duration + "ms ===");
             System.out.println("Processed " + coOccurrenceMatrix.size() + " products");
+
+            // Step 4: Compute content-based similarity
+            System.out.println("=== Starting content-based similarity computation ===");
+            contentBasedService.computeContentBasedSimilarity();
+
+            // Step 5: Decay popularity scores
+            System.out.println("=== Decaying popularity scores ===");
+            hybridService.decayPopularityScores();
+
+            System.out.println("=== All recommendation computations completed ===");
 
         } catch (Exception e) {
             System.err.println("Failed to compute recommendations: " + e.getMessage());
