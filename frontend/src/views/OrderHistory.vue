@@ -12,7 +12,13 @@
         @click="currentTab = 'orders'"
         :class="['tab-button', { active: currentTab === 'orders' }]"
       >
-        📦 订单记录
+        📦 我买到的
+      </button>
+      <button
+        @click="currentTab = 'seller-orders'"
+        :class="['tab-button', { active: currentTab === 'seller-orders' }]"
+      >
+        💰 我卖出的
       </button>
       <button
         @click="currentTab = 'bargains'"
@@ -111,6 +117,78 @@
         </div>
       </div>
     </div>
+    </div>
+
+    <!-- 我卖出的订单标签页 -->
+    <div v-show="currentTab === 'seller-orders'">
+      <div v-if="sellerOrdersLoading" class="loading-container">
+        <div class="loading-spinner"></div>
+        <p>加载中...</p>
+      </div>
+
+      <div v-else-if="sellerOrders.length === 0" class="empty-container">
+        <div class="empty-icon">💰</div>
+        <p>暂无卖出的订单</p>
+        <router-link to="/" class="btn btn-primary">去发布商品</router-link>
+      </div>
+
+      <div v-else class="orders-list">
+        <div v-for="order in sellerOrders" :key="order.id" class="order-card seller-order">
+          <div class="order-header">
+            <div class="order-info">
+              <span class="order-number">订单号: {{ order.id }}</span>
+              <span class="order-date">{{ formatDate(order.createdAt) }}</span>
+              <span class="seller-badge">💰 卖家</span>
+            </div>
+            <div class="order-status" :class="getStatusClass(order.status, order)">
+              {{ getStatusText(order.status, order) }}
+            </div>
+          </div>
+
+          <div class="order-body">
+            <div class="order-amount">
+              <span class="label">订单金额：</span>
+              <span class="amount">¥{{ order.totalAmount }}</span>
+            </div>
+
+            <div v-if="order.paymentMethod" class="order-payment">
+              <span class="label">支付方式：</span>
+              <span class="payment-badge">
+                {{ getPaymentIcon(order.paymentMethod) }} {{ getPaymentText(order.paymentMethod) }}
+              </span>
+            </div>
+
+            <div class="buyer-info">
+              <span class="label">买家ID：</span>
+              <span class="buyer-id">{{ order.userId }}</span>
+            </div>
+          </div>
+
+          <div class="order-actions">
+            <button
+              v-if="order.status === 'DELIVERED'"
+              class="btn btn-success"
+              disabled
+            >
+              ✅ 交易完成
+            </button>
+            <button
+              v-if="order.status === 'PAID'"
+              class="btn btn-info"
+              disabled
+            >
+              ⏳ 等待买家确认收货
+            </button>
+            <button
+              v-if="order.status === 'PENDING'"
+              class="btn btn-warning"
+              disabled
+            >
+              ⏰ 等待买家付款
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- 砍价活动列表标签页 -->
@@ -218,7 +296,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
 
@@ -226,8 +304,19 @@ const router = useRouter();
 const currentTab = ref('orders'); // 当前标签页
 const orders = ref([]);
 const loading = ref(true);
+const sellerOrders = ref([]);
+const sellerOrdersLoading = ref(false);
 const bargains = ref([]);
 const bargainsLoading = ref(false);
+
+// 监听标签页切换
+watch(currentTab, (newTab) => {
+  if (newTab === 'seller-orders' && sellerOrders.value.length === 0) {
+    fetchSellerOrders();
+  } else if (newTab === 'bargains' && bargains.value.length === 0) {
+    fetchBargains();
+  }
+});
 
 const paymentMethods = {
   alipay: { icon: '💙', text: '支付宝' },
@@ -270,6 +359,20 @@ const checkReviewStatus = async (order) => {
 // 跳转到评价页面
 const goToReview = (orderId) => {
   router.push(`/review/${orderId}`);
+};
+
+// 获取卖家订单列表
+const fetchSellerOrders = async () => {
+  try {
+    sellerOrdersLoading.value = true;
+    const response = await axios.get('/api/orders/seller');
+    sellerOrders.value = response.data;
+  } catch (error) {
+    console.error('获取卖家订单失败:', error);
+    alert('获取卖家订单失败');
+  } finally {
+    sellerOrdersLoading.value = false;
+  }
 };
 
 // 获取砍价活动列表

@@ -405,6 +405,11 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    public List<Order> getSellerOrders(Integer sellerId) {
+        return orderMapper.findBySellerId(sellerId);
+    }
+
+    @Override
     public Order getOrderById(Integer orderId) {
         return orderMapper.findById(orderId);
     }

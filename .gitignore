@@ -42,3 +42,8 @@ build/
 # MinIO data
 minio/data/
 
+
+# Frontend build output and dependencies
+frontend/dist/
+frontend/node_modules/
+

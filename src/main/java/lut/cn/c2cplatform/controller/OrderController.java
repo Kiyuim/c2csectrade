@@ -53,6 +53,14 @@ public class OrderController {
         return ResponseEntity.ok(orders);
     }
 
+    @GetMapping("/seller")
+    public ResponseEntity<List<Order>> getSellerOrders(Authentication authentication) {
+        String username = authentication.getName();
+        User user = userMapper.selectByUsername(username);
+        List<Order> orders = orderService.getSellerOrders(user.getId().intValue());
+        return ResponseEntity.ok(orders);
+    }
+
     @GetMapping("/{orderId}")
     public ResponseEntity<Order> getOrderById(@PathVariable Integer orderId) {
         Order order = orderService.getOrderById(orderId);

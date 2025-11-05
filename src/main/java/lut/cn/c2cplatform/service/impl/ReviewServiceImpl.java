@@ -102,7 +102,9 @@ public class ReviewServiceImpl implements ReviewService {
             review.setReviewImages(String.join(",", request.getReviewImages()));
         }
 
-        review.setCreatedAt(Instant.now());
+        Instant now = Instant.now();
+        review.setCreatedAt(now);
+        review.setUpdatedAt(now);
         reviewMapper.insert(review);
 
         // Update product popularity when reviewed

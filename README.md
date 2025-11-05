@@ -1,6 +1,8 @@
-# c2csectrade- 智能二手商品交易平台
+# C2C SecTrade - 智能二手商品交易平台
 
-c2secctrade 是一个功能完善的C2C（用户对用户）二手商品交易平台，基于**分布式架构**和**AI推荐系统**，为用户提供安全、便捷、智能的闲置物品交易环境。平台支持**数码产品、服装鞋包、图书、家居生活、运动户外**等十多个品类，采用现代化的前后端分离架构，集成了**即时通讯、在线议价、智能推荐、信用评价、实时推荐**等创新功能。
+C2C SecTrade 是一个功能完善的企业级C2C（用户对用户）二手商品交易平台，基于**分布式微服务架构**和**AI智能推荐系统**，为用户提供安全、便捷、智能的闲置物品交易环境。
+
+平台支持**数码产品、服装鞋包、图书音像、家居生活、运动户外、美妆个护、母婴玩具、食品保健**等十多个品类，采用现代化的前后端分离架构，深度集成了**Redis缓存、RabbitMQ消息队列、Elasticsearch全文搜索**等分布式组件，提供**即时通讯、智能推荐、砍价议价、信用评价、实时消息推送**等创新功能。
 
 ## 🌟 核心亮点
 
@@ -24,9 +26,12 @@ c2secctrade 是一个功能完善的C2C（用户对用户）二手商品交易�
   - **购物车**：支持添加、移除、修改商品数量，并可合并结算。
   - **订单系统**：从购物车或商品页创建订单，支持多卖家订单自动拆分。
   - **模拟支付**：内置账户余额和支付密码系统，模拟真实的支付体验。
-  - **订单历史**：用户可以追踪作为买家或卖家的所有订单状态。
+  - **订单中心**：
+    - **我买到的**：追踪作为买家的所有订单，支持支付、确认收货、评价等操作
+    - **我卖出的**：查看作为卖家的所有订单，实时掌握销售情况
+    - **砍价活动**：管理所有参与的砍价活动和助力记录
 - **信用与评价体系**：
-  - **双向评价**：交易完成后，买卖双方可以互相评分和评论。
+  - **双向评价**：交易完成后，买卖双方可以互相评分和评论，支持图片评价和匿名评价。
   - **信用积分**：系统根据交易量、好评率等自动计算用户信用分和等级，构建平台信任体系。
 - **个性化功能**：
   - **收藏夹**：方便用户收藏和追踪感兴趣的商品。
@@ -107,6 +112,35 @@ c2secctrade 是一个功能完善的C2C（用户对用户）二手商品交易�
 
 ### 部署步骤
 
+#### 方式一：使用 Makefile（推荐）
+
+项目提供了便捷的 Makefile 脚本，可以一键完成编译和部署：
+
+```bash
+# 克隆仓库
+git clone https://github.com/kiyuim/c2csectrade.git
+cd c2csectrade
+
+# 一键启动（自动编译前后端并启动所有服务）
+make up
+
+# 或者分步执行
+make build-backend    # 编译后端
+make build-frontend   # 编译前端
+make up               # 启动所有服务
+
+# 查看日志
+make logs
+
+# 停止服务
+make down
+
+# 重启服务
+make restart
+```
+
+#### 方式二：手动编译部署
+
 1.  **克隆仓库**
     ```bash
     git clone https://github.com/kiyuim/c2csectrade.git
@@ -130,15 +164,30 @@ c2secctrade 是一个功能完善的C2C（用户对用户）二手商品交易�
         这会在`frontend/dist`目录下生成用于生产环境的静态文件。
 
 3.  **启动服务**
-    使用Docker Compose一键启动所有服务（包括Nginx, Spring Boot, MySQL, MinIO）。
+    使用Docker Compose一键启动所有服务。
     ```bash
-    docker compose up --build
+    docker compose up --build -d
     ```
-    `--build`参数会确保Docker镜像基于最新的代码进行构建。
 
 4.  **访问应用**
-    -   **前端应用**: [http://localhost:8080](http://localhost:8080)
-    -   **MinIO控制台**: [http://localhost:9001](http://localhost:9001) (AccessKey: `minioadmin`, SecretKey: `minioadmin`)
+    -   **前端应用**: [http://localhost](http://localhost) (默认端口80)
+    -   **后端API**: [http://localhost/api](http://localhost/api)
+    -   **MinIO控制台**: [http://localhost:9001](http://localhost:9001) 
+        - AccessKey: `minioadmin`
+        - SecretKey: `minioadmin`
+    -   **RabbitMQ管理界面**: [http://localhost:15672](http://localhost:15672)
+        - 用户名: `admin`
+        - 密码: `admin123`
+
+### 初始账号
+
+系统默认创建了以下测试账号：
+
+| 角色 | 用户名 | 密码 | 说明 |
+|------|--------|------|------|
+| 管理员 | admin | admin123 | 拥有所有管理权限 |
+| 普通用户 | user1 | password123 | 测试买家账号 |
+| 普通用户 | user2 | password123 | 测试卖家账号 |
 
 ## 📚 功能文档
 

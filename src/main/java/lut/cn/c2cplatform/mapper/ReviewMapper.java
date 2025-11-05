@@ -9,7 +9,8 @@ import java.util.List;
 public interface ReviewMapper {
 
     @Insert("INSERT INTO review (order_id, product_id, buyer_id, seller_id, product_rating, seller_rating, comment, review_images, is_anonymous, created_at, updated_at) " +
-            "VALUES (#{orderId}, #{productId}, #{buyerId}, #{sellerId}, #{productRating}, #{sellerRating}, #{comment}, #{reviewImages}, #{isAnonymous}, #{createdAt}, #{updatedAt})")
+            "VALUES (#{orderId}, #{productId}, #{buyerId}, #{sellerId}, #{productRating}, #{sellerRating}, #{comment}, #{reviewImages}, #{isAnonymous}, " +
+            "COALESCE(#{createdAt}, CURRENT_TIMESTAMP), COALESCE(#{updatedAt}, CURRENT_TIMESTAMP))")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     void insert(Review review);
 

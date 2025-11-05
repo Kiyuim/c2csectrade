@@ -12,5 +12,6 @@ public interface OrderService {
     Order confirmOrder(Integer orderId);
     Order cancelOrder(Integer orderId);
     List<Order> getUserOrders(Integer userId);
+    List<Order> getSellerOrders(Integer sellerId);
     Order getOrderById(Integer orderId);
 }

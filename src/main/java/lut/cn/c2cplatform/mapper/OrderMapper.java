@@ -16,6 +16,13 @@ public interface OrderMapper {
     List<Order> findExpiredOrders();
     void batchUpdateStatusToExpired(@Param("orderIds") List<Integer> orderIds);
 
+    @Select("SELECT DISTINCT o.* FROM `orders` o " +
+            "JOIN order_items oi ON o.id = oi.order_id " +
+            "JOIN pms_product p ON oi.product_id = p.id " +
+            "WHERE p.user_id = #{sellerId} " +
+            "ORDER BY o.created_at DESC")
+    List<Order> findBySellerId(@Param("sellerId") Integer sellerId);
+
     @Select("SELECT COUNT(DISTINCT o.id) FROM `orders` o " +
             "JOIN order_items oi ON o.id = oi.order_id " +
             "JOIN pms_product p ON oi.product_id = p.id " +
