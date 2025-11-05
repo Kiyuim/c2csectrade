@@ -50,7 +50,7 @@ CREATE TABLE `users` (
     `payment_password_hash` VARCHAR(255) NULL COMMENT 'BCrypt hashed payment password (6 digits)',
     `email` VARCHAR(100) NOT NULL COMMENT 'User email, unique',
     `avatar_url` VARCHAR(255) NULL COMMENT 'User avatar URL',
-    `balance` DECIMAL(10, 2) NOT NULL DEFAULT 0.00 COMMENT 'User balance',
+    `balance` DECIMAL(15, 2) NOT NULL DEFAULT 0.00 COMMENT 'User balance',
     `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Creation time',
     `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Last update time',
     PRIMARY KEY (`id`),

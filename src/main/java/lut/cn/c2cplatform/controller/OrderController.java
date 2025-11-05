@@ -91,7 +91,7 @@ public class OrderController {
     }
 
     /**
-     * 检查用户是否有未完成的订单（PENDING状态）
+     * 检查用户是否有未完成的订单（PENDING状态且未过期）
      */
     @GetMapping("/check-pending")
     public ResponseEntity<?> checkPendingOrders(Authentication authentication) {
@@ -99,16 +99,20 @@ public class OrderController {
         User user = userMapper.selectByUsername(username);
         List<Order> orders = orderService.getUserOrders(user.getId().intValue());
 
-        // 检查是否有待支付的订单
+        java.util.Date now = new java.util.Date();
+
+        // 检查是否有待支付且未过期的订单
         boolean hasPendingOrder = orders.stream()
-                .anyMatch(order -> "PENDING".equals(order.getStatus()));
+                .anyMatch(order -> "PENDING".equals(order.getStatus())
+                    && (order.getExpireTime() == null || order.getExpireTime().after(now)));
 
         java.util.Map<String, Object> response = new java.util.HashMap<>();
         response.put("hasPendingOrder", hasPendingOrder);
 
         if (hasPendingOrder) {
             Order pendingOrder = orders.stream()
-                    .filter(order -> "PENDING".equals(order.getStatus()))
+                    .filter(order -> "PENDING".equals(order.getStatus())
+                        && (order.getExpireTime() == null || order.getExpireTime().after(now)))
                     .findFirst()
                     .orElse(null);
             response.put("orderId", pendingOrder != null ? pendingOrder.getId() : null);

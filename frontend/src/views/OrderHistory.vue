@@ -93,14 +93,14 @@
           </button>
           <!-- 已完成订单 -->
           <button
-            v-if="order.status === 'DELIVERED' && !order.hasReviewed"
+            v-if="(order.status === 'DELIVERED' || order.status === 'COMPLETED') && !order.hasReviewed"
             @click="goToReview(order.id)"
             class="btn btn-warning"
           >
             ⭐ 评价订单
           </button>
           <button
-            v-if="order.status === 'DELIVERED' && order.hasReviewed"
+            v-if="(order.status === 'DELIVERED' || order.status === 'COMPLETED') && order.hasReviewed"
             class="btn btn-default"
             disabled
           >
@@ -333,7 +333,7 @@ const fetchOrders = async () => {
 
     // 为每个已完成的订单检查是否已评价
     for (const order of orders.value) {
-      if (order.status === 'DELIVERED') {
+      if (order.status === 'DELIVERED' || order.status === 'COMPLETED') {
         await checkReviewStatus(order);
       }
     }
@@ -475,17 +475,18 @@ const cancelOrder = async (orderId) => {
 };
 
 const confirmDelivery = async (orderId) => {
-  if (!confirm('确认已收到商品吗？')) {
+  if (!confirm('确认已收到商品吗？确认后款项将转给卖家。')) {
     return;
   }
 
   try {
     await axios.post(`/api/orders/${orderId}/confirm`);
-    alert('确认收货成功');
+    alert('确认收货成功！款项已转给卖家。');
     fetchOrders();
   } catch (error) {
     console.error('确认收货失败:', error);
-    alert('确认收货失败');
+    const errorMessage = error.response?.data?.message || error.response?.data || '确认收货失败，请重试';
+    alert('确认收货失败：' + errorMessage);
   }
 };
 
@@ -499,6 +500,7 @@ const getStatusClass = (status, order) => {
     'PENDING': 'status-pending',
     'PAID': 'status-paid',
     'DELIVERED': 'status-delivered',
+    'COMPLETED': 'status-completed',
     'CANCELED': 'status-canceled',
     'EXPIRED': 'status-expired'
   };
@@ -515,6 +517,7 @@ const getStatusText = (status, order) => {
     'PENDING': '待支付',
     'PAID': '已支付',
     'DELIVERED': '已完成',
+    'COMPLETED': '已完成',
     'CANCELED': '已取消',
     'EXPIRED': '已过期'
   };
@@ -939,7 +942,8 @@ onMounted(() => {
   color: #2e7d32;
 }
 
-.status-delivered {
+.status-delivered,
+.status-completed {
   background: #e3f2fd;
   color: #1565c0;
 }

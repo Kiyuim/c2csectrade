@@ -354,6 +354,7 @@ const submitPayment = async () => {
     });
 
     // 支付成功，跳转到成功页面
+    closePasswordDialog();
     router.push({
       path: '/payment-result',
       query: {

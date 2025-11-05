@@ -47,6 +47,9 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public Order createOrderFromCart(Integer userId) {
+        // 自动取消该用户所有过期的PENDING订单
+        cancelExpiredPendingOrders(userId);
+
         List<CartItem> cartItems = cartItemMapper.selectByUserId(userId.longValue());
         if (cartItems.isEmpty()) {
             throw new RuntimeException("购物车为空");
@@ -104,6 +107,9 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public Order createOrderForProduct(Integer userId, Long productId, Integer quantity) {
+        // 自动取消该用户所有过期的PENDING订单
+        cancelExpiredPendingOrders(userId);
+
         // 使用行锁查询商品（防止并发超卖）
         Product product = productMapper.selectByIdForUpdate(productId);
         if (product == null) {
@@ -314,8 +320,11 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public Order confirmOrder(Integer orderId) {
         Order order = orderMapper.findById(orderId);
-        if (order == null || !"PAID".equals(order.getStatus())) {
-            throw new RuntimeException("Order not found or not paid");
+        if (order == null) {
+            throw new RuntimeException("订单不存在");
+        }
+        if (!"PAID".equals(order.getStatus()) && !"DELIVERED".equals(order.getStatus())) {
+            throw new RuntimeException("只有已支付的订单才能确认收货");
         }
 
         // 获取订单项，找到所有卖家并增加余额
@@ -329,9 +338,22 @@ public class OrderServiceImpl implements OrderService {
                     // 计算该商品的总价
                     java.math.BigDecimal itemTotal = item.getPrice().multiply(new java.math.BigDecimal(item.getQuantity()));
 
+                    // 验证金额是否有效
+                    if (itemTotal.compareTo(java.math.BigDecimal.ZERO) <= 0) {
+                        throw new RuntimeException("订单金额异常，无法完成确认收货");
+                    }
+
                     // 增加卖家余额
                     java.math.BigDecimal currentBalance = seller.getBalance() != null ? seller.getBalance() : java.math.BigDecimal.ZERO;
-                    seller.setBalance(currentBalance.add(itemTotal));
+                    java.math.BigDecimal newBalance = currentBalance.add(itemTotal);
+
+                    // 验证余额不会超过限制 (DECIMAL(15,2) 最大值)
+                    java.math.BigDecimal maxBalance = new java.math.BigDecimal("9999999999999.99");
+                    if (newBalance.compareTo(maxBalance) > 0) {
+                        throw new RuntimeException("余额超出系统限制，请联系管理员");
+                    }
+
+                    seller.setBalance(newBalance);
                     seller.setUpdatedAt(java.time.Instant.now());
                     userMapper.update(seller);
 
@@ -344,7 +366,7 @@ public class OrderServiceImpl implements OrderService {
         // 更新买家信用分
         creditScoreService.updateCreditScore(order.getUserId().longValue());
 
-        order.setStatus("DELIVERED");
+        order.setStatus("COMPLETED");
         order.setUpdatedAt(new Date());
         orderMapper.updateStatus(order);
 
@@ -412,5 +434,27 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public Order getOrderById(Integer orderId) {
         return orderMapper.findById(orderId);
+    }
+
+    /**
+     * 自动取消用户所有过期的PENDING订单
+     * 在创建新订单前调用，避免重复创建订单
+     */
+    private void cancelExpiredPendingOrders(Integer userId) {
+        List<Order> userOrders = orderMapper.findByUserId(userId);
+        Date now = new Date();
+
+        for (Order order : userOrders) {
+            // 如果订单是PENDING状态且已过期，自动取消
+            if ("PENDING".equals(order.getStatus()) && order.getExpireTime() != null && order.getExpireTime().before(now)) {
+                try {
+                    // 使用现有的取消订单逻辑
+                    cancelOrder(order.getId());
+                } catch (Exception e) {
+                    // 如果取消失败，记录日志但继续处理（不影响新订单创建）
+                    System.err.println("自动取消过期订单失败: " + order.getId() + ", 错误: " + e.getMessage());
+                }
+            }
+        }
     }
 }

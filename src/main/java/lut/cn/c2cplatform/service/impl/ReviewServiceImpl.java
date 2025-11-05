@@ -56,7 +56,7 @@ public class ReviewServiceImpl implements ReviewService {
         }
 
         // 验证订单状态（只有已完成的订单才能评价）
-        if (!"DELIVERED".equals(order.getStatus())) {
+        if (!"DELIVERED".equals(order.getStatus()) && !"COMPLETED".equals(order.getStatus())) {
             throw new RuntimeException("订单未完成，无法评价");
         }
 
