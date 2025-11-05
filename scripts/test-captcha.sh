@@ -7,7 +7,7 @@ echo "=========================================="
 echo ""
 
 echo "1. 检查容器状态..."
-docker ps --filter name=rebooktrade --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | head -10
+docker ps --filter name=c2csectrade --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | head -10
 
 echo -e "\n2. 测试后端验证码接口..."
 echo "请求: http://localhost:8080/api/captcha/generate"
@@ -46,10 +46,10 @@ else
 fi
 
 echo -e "\n4. 查看最近的后端日志（最后20行）..."
-docker logs rebooktrade-backend --tail 20 2>&1 | tail -20
+docker logs c2csectrade-backend --tail 20 2>&1 | tail -20
 
 echo -e "\n5. 查看最近的前端 Nginx 日志（最后10行）..."
-docker logs rebooktrade-frontend --tail 10 2>&1 | tail -10
+docker logs c2csectrade-frontend --tail 10 2>&1 | tail -10
 
 echo -e "\n=========================================="
 echo "诊断完成"

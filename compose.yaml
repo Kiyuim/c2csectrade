@@ -3,7 +3,7 @@ services:
   # MySQL Database
   mysql:
     image: mysql:8.0
-    container_name: rebooktrade-mysql
+    container_name: c2csectrade-mysql
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: trade
@@ -20,12 +20,12 @@ services:
       timeout: 20s
       retries: 10
     networks:
-      - rebooktrade-network
+      - c2csectrade-network
 
   # Redis Cache
   redis:
     image: redis:7-alpine
-    container_name: rebooktrade-redis
+    container_name: c2csectrade-redis
     ports:
       - "6379:6379"
     volumes:
@@ -37,12 +37,12 @@ services:
       timeout: 3s
       retries: 5
     networks:
-      - rebooktrade-network
+      - c2csectrade-network
 
   # RabbitMQ Message Queue
   rabbitmq:
     image: rabbitmq:3.12-management-alpine
-    container_name: rebooktrade-rabbitmq
+    container_name: c2csectrade-rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: admin
       RABBITMQ_DEFAULT_PASS: admin123
@@ -58,12 +58,12 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - rebooktrade-network
+      - c2csectrade-network
 
   # Elasticsearch
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
-    container_name: rebooktrade-elasticsearch
+    container_name: c2csectrade-elasticsearch
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
@@ -79,12 +79,12 @@ services:
       timeout: 10s
       retries: 5
     networks:
-      - rebooktrade-network
+      - c2csectrade-network
 
   # MinIO Object Storage
   minio:
     image: minio/minio:latest
-    container_name: rebooktrade-minio
+    container_name: c2csectrade-minio
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
@@ -100,14 +100,14 @@ services:
       timeout: 20s
       retries: 3
     networks:
-      - rebooktrade-network
+      - c2csectrade-network
 
   # Backend Application (可以扩展多个实例)
   backend:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: rebooktrade-backend
+    container_name: c2csectrade-backend
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/trade?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci&useServerPrepStmts=true&cachePrepStmts=true&rewriteBatchedStatements=true
@@ -131,7 +131,7 @@ services:
       minio:
         condition: service_healthy
     networks:
-      - rebooktrade-network
+      - c2csectrade-network
     restart: unless-stopped
     # 可以通过scale扩展多个实例
     # deploy:
@@ -142,13 +142,13 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: rebooktrade-frontend
+    container_name: c2csectrade-frontend
     ports:
       - "80:80"
     depends_on:
       - backend
     networks:
-      - rebooktrade-network
+      - c2csectrade-network
 
 volumes:
   mysql-data:
@@ -161,6 +161,6 @@ volumes:
     driver: local
 
 networks:
-  rebooktrade-network:
+  c2csectrade-network:
     driver: bridge
 

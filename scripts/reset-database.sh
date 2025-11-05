@@ -3,7 +3,7 @@
 # Reset database script for both local and Docker MySQL
 
 echo "================================================"
-echo "RebookTrade - Database Reset Script"
+echo "c2csectrade - Database Reset Script"
 echo "================================================"
 
 # MySQL credentials

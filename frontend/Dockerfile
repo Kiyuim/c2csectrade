@@ -1,4 +1,4 @@
-# 多阶段构建 Dockerfile for RebookTrade Frontend
+# 多阶段构建 Dockerfile for c2csectrade Frontend
 
 # Stage 1: Build stage
 FROM node:18-alpine AS build

@@ -1,4 +1,4 @@
-# 多阶段构建 Dockerfile for RebookTrade Backend
+# 多阶段构建 Dockerfile for c2csectrade Backend
 
 # Stage 1: Build stage
 FROM maven:3.9-amazoncorretto-17 AS build

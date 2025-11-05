@@ -1,5 +1,5 @@
 -- =================================================================
--- RebookTrade - Complete Database Initialization Script
+-- c2csectrade - Complete Database Initialization Script
 -- Version: 2.0
 -- Last Updated: 2025-10-21
 -- =================================================================

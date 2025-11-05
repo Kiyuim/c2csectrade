@@ -107,7 +107,7 @@ backend (8080)
 
 ```bash
 # 使用修复后的完整启动脚本
-cd /Users/Kiyu/IdeaProjects/temaple/rebooktrade
+cd /Users/Kiyu/IdeaProjects/temaple/c2csectrade
 ./scripts/start-fixed.sh
 ```
 
@@ -238,7 +238,7 @@ MINIO_SECRET_KEY: minioadmin
 
 ### 服务间通信
 
-所有服务在 `rebooktrade-network` 桥接网络中通信，使用服务名作为主机名。
+所有服务在 `c2csectrade-network` 桥接网络中通信，使用服务名作为主机名。
 
 ---
 

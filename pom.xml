@@ -11,8 +11,8 @@
     <groupId>com.example</groupId>
     <artifactId>c2c-platform</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>RebookTrade</name>
-    <description>RebookTrade - Intelligent Second-hand Goods Trading Platform with AI Recommendations</description>
+    <name>c2csectrade</name>
+    <description>c2csectrade - Intelligent Second-hand Goods Trading Platform with AI Recommendations</description>
     <properties>
         <!-- Default to Java 17 for maximum compatibility (Lombok + toolchain) -->
         <java.version>17</java.version>
