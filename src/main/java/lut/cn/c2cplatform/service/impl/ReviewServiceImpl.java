@@ -6,6 +6,7 @@ import lut.cn.c2cplatform.entity.*;
 import lut.cn.c2cplatform.mapper.*;
 import lut.cn.c2cplatform.service.CreditScoreService;
 import lut.cn.c2cplatform.service.ReviewService;
+import lut.cn.c2cplatform.service.HybridRecommendationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +37,9 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Autowired
     private CreditScoreService creditScoreService;
+
+    @Autowired(required = false)
+    private HybridRecommendationService hybridRecommendationService;
 
     @Override
     @Transactional
@@ -99,9 +103,12 @@ public class ReviewServiceImpl implements ReviewService {
         }
 
         review.setCreatedAt(Instant.now());
-        review.setUpdatedAt(Instant.now());
-
         reviewMapper.insert(review);
+
+        // Update product popularity when reviewed
+        if (hybridRecommendationService != null) {
+            hybridRecommendationService.updatePopularity(product.getId(), "review");
+        }
 
         // 更新卖家信用分
         creditScoreService.updateCreditScore(product.getUserId());
@@ -181,4 +188,3 @@ public class ReviewServiceImpl implements ReviewService {
         return response;
     }
 }
-

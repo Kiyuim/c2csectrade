@@ -18,6 +18,9 @@ public class FavoriteService {
     @Autowired
     private UserMapper userMapper;
 
+    @Autowired(required = false)
+    private HybridRecommendationService hybridRecommendationService;
+
     public boolean addFavorite(String username, Long productId) {
         var user = userMapper.selectByUsername(username);
         if (user == null) {
@@ -37,6 +40,12 @@ public class FavoriteService {
                 .build();
 
         favoriteMapper.insert(favorite);
+
+        // Update product popularity
+        if (hybridRecommendationService != null) {
+            hybridRecommendationService.updatePopularity(productId, "favorite");
+        }
+
         return true;
     }
 

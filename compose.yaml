@@ -1,51 +1,69 @@
+
 services:
-  mysql-db:
+  # MySQL Database
+  mysql:
     image: mysql:8.0
-    container_name: c2c_mysql
-    restart: always
+    container_name: rebooktrade-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: Qsycl741
+      MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: trade
+      MYSQL_USER: tradeuser
+      MYSQL_PASSWORD: tradepass
     ports:
       - "3306:3306"
     volumes:
-      - mysql_data_v2:/var/lib/mysql
+      - mysql-data:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
     networks:
-      - c2c-network
+      - rebooktrade-network
 
-  redis-cache:
+  # Redis Cache
+  redis:
     image: redis:7-alpine
-    container_name: c2c_redis
-    restart: always
+    container_name: rebooktrade-redis
     ports:
       - "6379:6379"
-    networks:
-      - c2c-network
-
-  minio:
-    image: minio/minio
-    container_name: mall-minio
     volumes:
-      - ./minio/data:/data
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    environment:
-      - MINIO_ROOT_USER=minioadmin
-      - MINIO_ROOT_PASSWORD=minioadmin
-    command: server /data --console-address ":9001"
+      - redis-data:/data
+    command: redis-server --appendonly yes
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      timeout: 20s
-      retries: 3
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
     networks:
-      - c2c-network
+      - rebooktrade-network
 
+  # RabbitMQ Message Queue
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: rebooktrade-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin123
+      RABBITMQ_DEFAULT_VHOST: /
+    ports:
+      - "5672:5672"   # AMQP port
+      - "15672:15672" # Management UI
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rebooktrade-network
+
+  # Elasticsearch
   elasticsearch:
-    image: elasticsearch:8.11.0
-    container_name: c2c_elasticsearch
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: rebooktrade-elasticsearch
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
@@ -54,56 +72,95 @@ services:
       - "9200:9200"
       - "9300:9300"
     volumes:
-      - es_data:/usr/share/elasticsearch/data
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
     networks:
-      - c2c-network
+      - rebooktrade-network
 
-  springboot-app:
+  # MinIO Object Storage
+  minio:
+    image: minio/minio:latest
+    container_name: rebooktrade-minio
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - ./minio/data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - rebooktrade-network
+
+  # Backend Application (可以扩展多个实例)
+  backend:
     build:
       context: .
-      args:
-        - JDK_VERSION=${JDK_VERSION:-17}
-    container_name: c2c_springboot
-    restart: always
+      dockerfile: Dockerfile
+    container_name: rebooktrade-backend
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/trade?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci&useServerPrepStmts=true&cachePrepStmts=true&rewriteBatchedStatements=true
+      SPRING_DATASOURCE_USERNAME: tradeuser
+      SPRING_DATASOURCE_PASSWORD: tradepass
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_ELASTICSEARCH_URIS: http://elasticsearch:9200
+      MINIO_ENDPOINT: http://minio:9000
     ports:
       - "8080:8080"
     depends_on:
-      - mysql-db
-      - redis-cache
-      - minio
-      - elasticsearch
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - MYSQL_HOST=mysql-db
-      - MYSQL_PORT=3306
-      - REDIS_HOST=redis-cache
-      - REDIS_PORT=6379
-      - MINIO_ENDPOINT=http://minio:9000
-      - MINIO_ACCESS_KEY=minioadmin
-      - MINIO_SECRET_KEY=minioadmin
-      - ELASTICSEARCH_HOST=elasticsearch
-      - ELASTICSEARCH_PORT=9200
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=Qsycl741
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-db:3306/trade?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
     networks:
-      - c2c-network
+      - rebooktrade-network
+    restart: unless-stopped
+    # 可以通过scale扩展多个实例
+    # deploy:
+    #   replicas: 3
 
+  # Frontend Application
   frontend:
-    build: ./frontend
-    container_name: c2c_frontend
-    restart: always
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: rebooktrade-frontend
     ports:
       - "80:80"
     depends_on:
-      - springboot-app
+      - backend
     networks:
-      - c2c-network
-
-networks:
-  c2c-network:
-    driver: bridge
+      - rebooktrade-network
 
 volumes:
-  mysql_data_v2:
-  es_data:
+  mysql-data:
+    driver: local
+  redis-data:
+    driver: local
+  rabbitmq-data:
+    driver: local
+  elasticsearch-data:
+    driver: local
+
+networks:
+  rebooktrade-network:
+    driver: bridge
+

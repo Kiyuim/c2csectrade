@@ -18,6 +18,9 @@ public class CartService {
     @Autowired
     private UserMapper userMapper;
 
+    @Autowired(required = false)
+    private HybridRecommendationService hybridRecommendationService;
+
     public boolean addToCart(String username, Long productId, Integer quantity) {
         var user = userMapper.selectByUsername(username);
         if (user == null) {
@@ -41,6 +44,11 @@ public class CartService {
                     .updatedAt(Instant.now())
                     .build();
             cartItemMapper.insert(cartItem);
+        }
+
+        // Update product popularity
+        if (hybridRecommendationService != null) {
+            hybridRecommendationService.updatePopularity(productId, "cart");
         }
 
         return true;

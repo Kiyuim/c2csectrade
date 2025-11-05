@@ -11,8 +11,8 @@
     <groupId>com.example</groupId>
     <artifactId>c2c-platform</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>c2c-platform</name>
-    <description>C2C Trading Platform</description>
+    <name>RebookTrade</name>
+    <description>RebookTrade - Intelligent Second-hand Goods Trading Platform with AI Recommendations</description>
     <properties>
         <!-- Default to Java 17 for maximum compatibility (Lombok + toolchain) -->
         <java.version>17</java.version>
@@ -91,6 +91,11 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-elasticsearch</artifactId>
+        </dependency>
+        <!-- RabbitMQ for distributed message queue -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
         </dependency>
     </dependencies>
 

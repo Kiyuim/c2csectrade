@@ -5,6 +5,7 @@ import lut.cn.c2cplatform.entity.*;
 import lut.cn.c2cplatform.mapper.*;
 import lut.cn.c2cplatform.service.CreditScoreService;
 import lut.cn.c2cplatform.service.OrderService;
+import lut.cn.c2cplatform.service.HybridRecommendationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,6 +40,9 @@ public class OrderServiceImpl implements OrderService {
 
     @Autowired
     private CreditScoreService creditScoreService;
+
+    @Autowired(required = false)
+    private HybridRecommendationService hybridRecommendationService;
 
     @Override
     @Transactional
@@ -247,6 +251,11 @@ public class OrderServiceImpl implements OrderService {
             Product product = productMapper.selectByIdForUpdate(productId);
             if (product == null) {
                 throw new RuntimeException("商品不存在");
+            }
+
+            // Update product popularity when order is paid
+            if (hybridRecommendationService != null) {
+                hybridRecommendationService.updatePopularity(productId, "order");
             }
 
             // 检查库存

@@ -24,6 +24,7 @@ public interface ProductMapper {
     List<Product> selectByIds(@Param("ids") List<Long> ids);
     List<Product> selectByCategory(@Param("category") String category);
     List<Product> selectRecentProducts(@Param("limit") int limit);
+    List<Product> selectAllActive(); // Get all active products for recommendation computation
 
     // 防止超卖：使用行锁查询商品
     Product selectByIdForUpdate(@Param("id") Long id);

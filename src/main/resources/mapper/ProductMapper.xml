@@ -124,6 +124,13 @@
         LIMIT #{limit}
     </select>
 
+    <select id="selectAllActive" resultMap="ProductResultMap">
+        SELECT * FROM pms_product
+        WHERE status = 1
+        AND stock > 0
+        ORDER BY created_at DESC
+    </select>
+
     <!-- 使用行锁查询商品（防止超卖） -->
     <select id="selectByIdForUpdate" resultMap="ProductResultMap">
         SELECT * FROM pms_product WHERE id = #{id} FOR UPDATE

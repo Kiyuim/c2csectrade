@@ -4,6 +4,7 @@ import lut.cn.c2cplatform.dto.ViewHistoryDTO;
 import lut.cn.c2cplatform.entity.Product;
 import lut.cn.c2cplatform.mapper.ProductMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
@@ -27,6 +28,10 @@ public class HistoryService {
     private static final String HISTORY_KEY_PREFIX = "history:user:";
     private static final String PROFILE_KEY_PREFIX = "profile:user:";
     private static final int MAX_HISTORY_SIZE = 100; // Keep last 100 views per user
+
+    @Lazy
+    @Autowired(required = false)
+    private HybridRecommendationService hybridRecommendationService;
 
     /**
      * Record a product view by a user
@@ -52,6 +57,11 @@ public class HistoryService {
 
         // Update user interest profile based on product tags
         updateUserInterestProfile(userId, productId);
+
+        // Update product popularity
+        if (hybridRecommendationService != null) {
+            hybridRecommendationService.updatePopularity(productId, "view");
+        }
     }
 
     /**

@@ -21,7 +21,8 @@ public class KaptchaConfig {
         properties.setProperty("kaptcha.textproducer.font.size", "30");
         properties.setProperty("kaptcha.session.key", "code");
         properties.setProperty("kaptcha.textproducer.char.length", "4");
-        properties.setProperty("kaptcha.textproducer.font.names", "宋体,楷体,微软雅黑");
+        // 使用 Docker 容器中默认存在的字体（避免中文字体缺失问题）
+        properties.setProperty("kaptcha.textproducer.font.names", "Arial,Courier,Sans-Serif");
         Config config = new Config(properties);
         defaultKaptcha.setConfig(config);
         return defaultKaptcha;
