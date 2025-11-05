@@ -41,6 +41,11 @@ public class CaptchaController {
         response.setContentType("image/jpeg");
         response.setHeader("Captcha-ID", captchaId);
 
+        // 设置HTTP头，防止缓存
+        response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate"); // HTTP 1.1
+        response.setHeader("Pragma", "no-cache"); // HTTP 1.0
+        response.setDateHeader("Expires", 0); // Proxies
+
         try (ServletOutputStream out = response.getOutputStream();
              ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             ImageIO.write(image, "jpg", baos);
