@@ -307,6 +307,46 @@ INSERT INTO `user_roles` (`user_id`, `role_id`) VALUES (1, 1), (1, 2)
 ON DUPLICATE KEY UPDATE user_id=VALUES(user_id);
 
 -- =================================================================
+-- Reputation System Test Data
+-- Users with different seller levels (1-5)
+-- Password for all users: admin123
+-- =================================================================
+
+-- 1. Create Users
+-- IDs 101-105 to avoid conflicts
+INSERT INTO `users` (`id`, `username`, `display_name`, `password_hash`, `email`, `avatar_url`, `balance`) VALUES
+(101, 'seller_lvl1', 'Seller Level 1', '$2a$12$9l1r7OVMYW3xsv/JQchZKutlvkIJgopmbNC3jEA3hUkNbN/ivzMn2', 'seller1@test.com', 'https://i.pravatar.cc/150?u=seller1', 1000.00),
+(102, 'seller_lvl2', 'Seller Level 2', '$2a$12$9l1r7OVMYW3xsv/JQchZKutlvkIJgopmbNC3jEA3hUkNbN/ivzMn2', 'seller2@test.com', 'https://i.pravatar.cc/150?u=seller2', 2000.00),
+(103, 'seller_lvl3', 'Seller Level 3', '$2a$12$9l1r7OVMYW3xsv/JQchZKutlvkIJgopmbNC3jEA3hUkNbN/ivzMn2', 'seller3@test.com', 'https://i.pravatar.cc/150?u=seller3', 3000.00),
+(104, 'seller_lvl4', 'Seller Level 4', '$2a$12$9l1r7OVMYW3xsv/JQchZKutlvkIJgopmbNC3jEA3hUkNbN/ivzMn2', 'seller4@test.com', 'https://i.pravatar.cc/150?u=seller4', 4000.00),
+(105, 'seller_lvl5', 'Seller Level 5', '$2a$12$9l1r7OVMYW3xsv/JQchZKutlvkIJgopmbNC3jEA3hUkNbN/ivzMn2', 'seller5@test.com', 'https://i.pravatar.cc/150?u=seller5', 5000.00)
+ON DUPLICATE KEY UPDATE 
+    password_hash=VALUES(password_hash), 
+    display_name=VALUES(display_name),
+    email=VALUES(email);
+
+-- 2. Assign Roles (ROLE_USER = 1)
+INSERT INTO `user_roles` (`user_id`, `role_id`) VALUES
+(101, 1),
+(102, 1),
+(103, 1),
+(104, 1),
+(105, 1)
+ON DUPLICATE KEY UPDATE role_id=VALUES(role_id);
+
+-- 3. Create Credit Scores / Reputation
+INSERT INTO `credit_score` (`user_id`, `total_score`, `level`, `total_sales`, `average_seller_rating`, `positive_reviews`, `neutral_reviews`, `negative_reviews`) VALUES
+(101, 100, 1, 10, 3.0, 8, 1, 1),
+(102, 300, 2, 30, 3.5, 25, 3, 2),
+(103, 600, 3, 60, 4.0, 55, 4, 1),
+(104, 1000, 4, 100, 4.5, 95, 4, 1),
+(105, 2000, 5, 200, 5.0, 200, 0, 0)
+ON DUPLICATE KEY UPDATE
+    total_score=VALUES(total_score),
+    level=VALUES(level),
+    average_seller_rating=VALUES(average_seller_rating);
+
+-- =================================================================
 -- End of Script
 -- =================================================================
 SELECT 'Database structure and essential data seeded successfully.' AS status;

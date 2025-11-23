@@ -85,13 +85,15 @@ public class ProductController {
             List<Product> products;
             // 如果有任何筛选参数，使用筛选查询
             if (keyword != null || minPrice != null || maxPrice != null ||
-                conditionLevel != null || location != null || categories != null) {
+                    conditionLevel != null || location != null || categories != null) {
                 products = productService.listProductsWithFilters(keyword, minPrice, maxPrice,
-                                                                   conditionLevel, location, categories);
+                        conditionLevel, location, categories);
             } else {
                 products = productService.listAllProducts();
             }
             List<ProductDTO> productDTOs = productService.convertToDTOList(products);
+            // 随机打乱顺序，增加新鲜感
+            java.util.Collections.shuffle(productDTOs);
             return ResponseEntity.ok(productDTOs);
         } catch (Exception e) {
             // 不暴露详细错误信息给前端，只记录日志

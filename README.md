@@ -46,7 +46,29 @@ C2C SecTrade 是一个功能完善的企业级C2C（用户对用户）二手商�
 ### 1. 首页概览
 ![首页概览](images/1.png)
 
-<!-- 更多图片请按此格式添加 -->
+### 2. 商品发布和管理
+<img src="images/2.png" width="45%" /> <img src="images/3.png" width="45%" />
+<img src="images/4.png" width="45%" /> <img src="images/5.png" width="45%" />
+
+### 3. 商品详情
+<img src="images/6.png" width="45%" /> <img src="images/7.png" width="45%" />
+
+### 4. 订单管理和购买商品
+<img src="images/9.png" width="45%" /> <img src="images/10.png" width="45%" />
+
+### 5. 更多功能展示
+<details>
+<summary>点击查看更多截图</summary>
+
+|  |  |
+|:---:|:---:|
+| ![11](images/11.png) | ![12](images/12.png) |
+| ![13](images/13.png) | ![14](images/14.png) |
+| ![15](images/15.png) | ![16](images/16.png) |
+| ![17](images/17.png) | ![18](images/18.png) |
+| ![19](images/19.png) | ![20](images/20.png) |
+
+</details>
 
 ### 后端技术
 - **核心框架**: Spring Boot 3.2.3
@@ -194,6 +216,11 @@ make restart
 | 角色 | 用户名 | 密码 | 说明 |
 |------|--------|------|------|
 | 管理员 | admin | admin123 | 拥有所有管理权限 |
+| 卖家(Lv1) | seller_lvl1 | admin123 | 信用分100, 等级1 |
+| 卖家(Lv2) | seller_lvl2 | admin123 | 信用分300, 等级2 |
+| 卖家(Lv3) | seller_lvl3 | admin123 | 信用分600, 等级3 |
+| 卖家(Lv4) | seller_lvl4 | admin123 | 信用分1000, 等级4 |
+| 卖家(Lv5) | seller_lvl5 | admin123 | 信用分2000, 等级5 |
 
 ## 📚 功能文档
 
