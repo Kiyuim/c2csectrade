@@ -121,6 +121,8 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
+import toast from '@/utils/toast';
+import Swal from 'sweetalert2';
 
 const router = useRouter();
 const route = useRoute();
@@ -179,13 +181,13 @@ const fetchOrderDetails = async () => {
 
     // 检查订单状态
     if (order.value.status === 'EXPIRED' || order.value.status === 'CANCELED') {
-      alert(`该订单已${order.value.status === 'EXPIRED' ? '过期' : '取消'}`);
+      toast.warning(`该订单已${order.value.status === 'EXPIRED' ? '过期' : '取消'}`);
       router.push('/order-history');
       return;
     }
 
     if (order.value.status !== 'PENDING') {
-      alert('该订单不可支付');
+      toast.warning('该订单不可支付');
       router.push('/order-history');
       return;
     }
@@ -196,7 +198,7 @@ const fetchOrderDetails = async () => {
       const expireTime = new Date(order.value.expireTime).getTime();
       if (now >= expireTime) {
         isExpired.value = true;
-        alert('订单已过期，商品已恢复到购物车');
+        toast.warning('订单已过期，商品已恢复到购物车');
         router.push({
           path: '/payment-result',
           query: {
@@ -216,7 +218,7 @@ const fetchOrderDetails = async () => {
     await fetchUserBalance();
   } catch (error) {
     console.error('获取订单详情失败:', error);
-    alert('获取订单详情失败');
+    toast.error('获取订单详情失败');
     router.push('/order-history');
   }
 };
@@ -238,7 +240,7 @@ const selectMethod = (methodId) => {
 
 const confirmPayment = async () => {
   if (!selectedMethod.value) {
-    alert('请选择支付方式');
+    toast.warning('请选择支付方式');
     return;
   }
 
@@ -253,7 +255,18 @@ const confirmPayment = async () => {
     hasPaymentPassword.value = response.data.hasPaymentPassword;
 
     if (!hasPaymentPassword.value) {
-      if (confirm('您还未设置支付密码，是否现在设置？')) {
+      const result = await Swal.fire({
+        title: '您还未设置支付密码',
+        text: "是否现在设置？",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: '去设置',
+        cancelButtonText: '取消'
+      });
+
+      if (result.isConfirmed) {
         // 保存当前路由信息，以便设置完成后返回
         sessionStorage.setItem('returnToPayment', orderId.value);
         router.push('/payment-password/setup');
@@ -262,7 +275,7 @@ const confirmPayment = async () => {
     }
   } catch (error) {
     console.error('检查支付密码失败:', error);
-    alert('检查支付密码状态失败，请重试');
+    toast.error('检查支付密码状态失败，请重试');
     return;
   }
 
@@ -317,7 +330,7 @@ const startCountdown = () => {
       clearInterval(countdownTimer);
 
       // 订单已过期，跳转到失败页面
-      alert('订单已过期，商品已恢复到购物车');
+      toast.warning('订单已过期，商品已恢复到购物车');
       router.push({
         path: '/payment-result',
         query: {
@@ -337,7 +350,7 @@ const startCountdown = () => {
 
 const submitPayment = async () => {
   if (password.value.length !== 6) {
-    alert('请输入完整的支付密码');
+    toast.warning('请输入完整的支付密码');
     return;
   }
 
@@ -386,23 +399,34 @@ const goHome = () => {
 };
 
 const cancelOrder = async () => {
-  if (!confirm('确定要取消订单吗？订单将被关闭，商品将恢复到购物车。')) {
+  const result = await Swal.fire({
+    title: '确定要取消订单吗？',
+    text: "订单将被关闭，商品将恢复到购物车。",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: '取消订单',
+    cancelButtonText: '暂不取消'
+  });
+
+  if (!result.isConfirmed) {
     return;
   }
 
   try {
     await axios.post(`/api/orders/${orderId.value}/cancel`);
-    alert('订单已取消');
+    toast.success('订单已取消');
     router.push('/');
   } catch (error) {
     console.error('取消订单失败:', error);
-    alert('取消订单失败');
+    toast.error('取消订单失败');
   }
 };
 
 onMounted(() => {
   if (!orderId.value) {
-    alert('订单信息错误');
+    toast.error('订单信息错误');
     router.push('/order-history');
     return;
   }

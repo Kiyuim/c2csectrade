@@ -51,6 +51,8 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
+import toast from '@/utils/toast';
+import Swal from 'sweetalert2';
 
 const router = useRouter();
 const favorites = ref([]);
@@ -63,24 +65,34 @@ const fetchFavorites = async () => {
     favorites.value = response.data;
   } catch (error) {
     console.error('获取收藏列表失败:', error);
-    alert('获取收藏列表失败');
+    toast.error('获取收藏列表失败');
   } finally {
     loading.value = false;
   }
 };
 
 const removeFavorite = async (productId) => {
-  if (!confirm('确定要取消收藏吗？')) {
+  const result = await Swal.fire({
+    title: '确定要取消收藏吗？',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: '确定',
+    cancelButtonText: '取消'
+  });
+
+  if (!result.isConfirmed) {
     return;
   }
 
   try {
     await axios.delete(`/api/favorites/remove/${productId}`);
     favorites.value = favorites.value.filter(p => p.id !== productId);
-    alert('已取消收藏');
+    toast.success('已取消收藏');
   } catch (error) {
     console.error('取消收藏失败:', error);
-    alert('取消收藏失败');
+    toast.error('取消收藏失败');
   }
 };
 

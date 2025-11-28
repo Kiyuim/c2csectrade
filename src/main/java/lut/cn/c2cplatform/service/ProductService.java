@@ -10,6 +10,8 @@ import lut.cn.c2cplatform.mapper.ProductMediaMapper;
 import lut.cn.c2cplatform.mapper.UserMapper;
 import lut.cn.c2cplatform.config.MinioProperties;
 import lut.cn.c2cplatform.event.ProductCreatedEvent;
+import lut.cn.c2cplatform.event.ProductUpdatedEvent;
+import lut.cn.c2cplatform.event.ProductDeletedEvent;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -56,32 +58,33 @@ public class ProductService {
             eventPublisher.publishEvent(new ProductCreatedEvent(this, product));
 
             return product;
-                } catch (Exception e) {
-                    System.err.println("创建商品失败: " + e.getMessage());
-                    e.printStackTrace();
-        
-                    // 异常补偿：删除已上传的文件
-                    for (String url : uploadedUrls) {
-                        try {
-                            String bucket = minioProperties.getBucketName();
-                            int idx = url.indexOf(bucket + "/");
-                            String objectName = idx >= 0 ? url.substring(idx + bucket.length() + 1) : null;
-                            if (objectName != null) {
-                                fileStorageService.deleteFile(objectName);
-                            }
-                        } catch (Exception deleteException) {
-                            System.err.println("清理上传文件失败: " + deleteException.getMessage());
-        
-                        }
+        } catch (Exception e) {
+            System.err.println("创建商品失败: " + e.getMessage());
+            e.printStackTrace();
+
+            // 异常补偿：删除已上传的文件
+            for (String url : uploadedUrls) {
+                try {
+                    String bucket = minioProperties.getBucketName();
+                    int idx = url.indexOf(bucket + "/");
+                    String objectName = idx >= 0 ? url.substring(idx + bucket.length() + 1) : null;
+                    if (objectName != null) {
+                        fileStorageService.deleteFile(objectName);
                     }
-                    throw new RuntimeException("创建商品失败: " + e.getMessage(), e);
+                } catch (Exception deleteException) {
+                    System.err.println("清理上传文件失败: " + deleteException.getMessage());
+
                 }
+            }
+            throw new RuntimeException("创建商品失败: " + e.getMessage(), e);
+        }
     }
 
     @Transactional
     protected Product saveProductWithMedia(ProductCreateDTO dto, List<String> urls, Long userId) {
         System.out.println("开始保存商品，用户ID: " + userId);
-        System.out.println("商品信息: name=" + dto.getName() + ", category=" + dto.getCategory() + ", price=" + dto.getPrice());
+        System.out.println(
+                "商品信息: name=" + dto.getName() + ", category=" + dto.getCategory() + ", price=" + dto.getPrice());
 
         Product product = new Product();
         product.setUserId(userId);
@@ -159,9 +162,10 @@ public class ProductService {
      * 带筛选条件的商品查询
      */
     public List<Product> listProductsWithFilters(String keyword, java.math.BigDecimal minPrice,
-                                                   java.math.BigDecimal maxPrice, Integer conditionLevel,
-                                                   String location, String category) {
-        List<Product> products = productMapper.selectWithFilters(keyword, minPrice, maxPrice, conditionLevel, location, category);
+            java.math.BigDecimal maxPrice, Integer conditionLevel,
+            String location, String category) {
+        List<Product> products = productMapper.selectWithFilters(keyword, minPrice, maxPrice, conditionLevel, location,
+                category);
         // 为每个商品加载媒体
         for (Product product : products) {
             List<ProductMedia> media = productMediaMapper.selectByProductId(product.getId());
@@ -211,11 +215,10 @@ public class ProductService {
             for (ProductMedia media : product.getMedia()) {
                 // 添加到media列表（用于前端多图展示）
                 ProductDTO.MediaItem mediaItem = new ProductDTO.MediaItem(
-                    media.getId(), // id已经是Long类型
-                    media.getUrl(),
-                    media.getMediaType(),
-                    media.getSortOrder()
-                );
+                        media.getId(), // id已经是Long类型
+                        media.getUrl(),
+                        media.getMediaType(),
+                        media.getSortOrder());
                 mediaItems.add(mediaItem);
 
                 // 同时添加到imageUrls或videoUrls（向后兼容）
@@ -261,6 +264,12 @@ public class ProductService {
 
     public void deleteProduct(Long id) {
         productMapper.deleteById(id);
+        // Sync to Elasticsearch
+        try {
+            eventPublisher.publishEvent(new ProductDeletedEvent(this, id));
+        } catch (Exception e) {
+            System.err.println("Failed to publish ProductDeletedEvent: " + e.getMessage());
+        }
     }
 
     public void delistProduct(Long id) {
@@ -379,6 +388,13 @@ public class ProductService {
             }
 
             System.out.println("商品更新成功");
+
+            // Sync to Elasticsearch
+            try {
+                eventPublisher.publishEvent(new ProductUpdatedEvent(this, product));
+            } catch (Exception e) {
+                System.err.println("Failed to publish ProductUpdatedEvent: " + e.getMessage());
+            }
             return product;
 
         } catch (IllegalArgumentException e) {

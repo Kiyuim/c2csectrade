@@ -136,6 +136,8 @@
 </template>
 
 <script setup>
+import toast from '@/utils/toast';
+
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useAuthStore } from '@/store/auth';
 import ChatWindow from '@/views/ChatWindow.vue';
@@ -207,7 +209,7 @@ const totalUnreadCount = computed(() =>
 
 const toggleChat = () => {
   if (!authStore.isLoggedIn) {
-    alert('请先登录');
+    toast.warning('请先登录');
     return;
   }
   showChat.value = !showChat.value;

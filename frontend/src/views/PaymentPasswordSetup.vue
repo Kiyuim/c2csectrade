@@ -64,6 +64,8 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
+import toast from '@/utils/toast';
+import Swal from 'sweetalert2';
 
 const router = useRouter();
 const isUpdate = ref(false);
@@ -84,29 +86,40 @@ const checkPaymentPasswordStatus = async () => {
 const submitPassword = async () => {
   // 验证输入
   if (isUpdate.value && !oldPassword.value) {
-    alert('请输入原支付密码');
+    toast.warning('请输入原支付密码');
     return;
   }
 
   if (!password.value) {
-    alert('请输入支付密码');
+    toast.warning('请输入支付密码');
     return;
   }
 
   if (!/^\d{6}$/.test(password.value)) {
-    alert('支付密码必须是6位数字');
+    toast.warning('支付密码必须是6位数字');
     return;
   }
 
   if (password.value !== confirmPassword.value) {
-    alert('两次输入的密码不一致');
+    toast.warning('两次输入的密码不一致');
     return;
   }
 
   // 简单密码检查
   const weakPasswords = ['123456', '000000', '111111', '222222', '333333', '444444', '555555', '666666', '777777', '888888', '999999'];
   if (weakPasswords.includes(password.value)) {
-    if (!confirm('您输入的密码过于简单，容易被破解。确定要使用吗？')) {
+    const result = await Swal.fire({
+      title: '您输入的密码过于简单',
+      text: "容易被破解。确定要使用吗？",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: '确定',
+      cancelButtonText: '取消'
+    });
+
+    if (!result.isConfirmed) {
       return;
     }
   }
@@ -121,14 +134,14 @@ const submitPassword = async () => {
         newPassword: password.value,
         confirmPassword: confirmPassword.value
       });
-      alert('支付密码修改成功');
+      toast.success('支付密码修改成功');
     } else {
       // 设置支付密码
       await axios.post('/api/users/payment-password/set', {
         password: password.value,
         confirmPassword: confirmPassword.value
       });
-      alert('支付密码设置成功');
+      toast.success('支付密码设置成功');
     }
 
     // 清空输入
@@ -157,9 +170,9 @@ const submitPassword = async () => {
   } catch (error) {
     console.error('操作失败:', error);
     if (error.response?.data?.message) {
-      alert(error.response.data.message);
+      toast.error(error.response.data.message);
     } else {
-      alert('操作失败，请重试');
+      toast.error('操作失败，请重试');
     }
   } finally {
     loading.value = false;

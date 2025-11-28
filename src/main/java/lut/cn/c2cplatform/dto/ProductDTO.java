@@ -29,6 +29,10 @@ public class ProductDTO {
     private String coverImage;
     private List<MediaItem> media; // 添加media字段以支持前端多图展示
 
+    // Highlighting fields
+    private String highlightedName;
+    private String highlightedDescription;
+
     @Data
     @NoArgsConstructor
     @AllArgsConstructor

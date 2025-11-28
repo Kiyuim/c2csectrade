@@ -299,6 +299,8 @@
 import { ref, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
+import toast from '@/utils/toast';
+import Swal from 'sweetalert2';
 
 const router = useRouter();
 const currentTab = ref('orders'); // 当前标签页
@@ -339,7 +341,7 @@ const fetchOrders = async () => {
     }
   } catch (error) {
     console.error('获取订单失败:', error);
-    alert('获取订单失败');
+    toast.error('获取订单失败');
   } finally {
     loading.value = false;
   }
@@ -369,7 +371,7 @@ const fetchSellerOrders = async () => {
     sellerOrders.value = response.data;
   } catch (error) {
     console.error('获取卖家订单失败:', error);
-    alert('获取卖家订单失败');
+    toast.error('获取卖家订单失败');
   } finally {
     sellerOrdersLoading.value = false;
   }
@@ -383,7 +385,7 @@ const fetchBargains = async () => {
     bargains.value = response.data;
   } catch (error) {
     console.error('获取砍价活动失败:', error);
-    alert('获取砍价活动失败');
+    toast.error('获取砍价活动失败');
   } finally {
     bargainsLoading.value = false;
   }
@@ -460,33 +462,54 @@ const goToPay = (orderId) => {
 };
 
 const cancelOrder = async (orderId) => {
-  if (!confirm('确定要取消该订单吗？')) {
+  const result = await Swal.fire({
+    title: '确定要取消该订单吗？',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: '取消订单',
+    cancelButtonText: '暂不取消'
+  });
+
+  if (!result.isConfirmed) {
     return;
   }
 
   try {
     await axios.post(`/api/orders/${orderId}/cancel`);
-    alert('订单已取消');
+    toast.success('订单已取消');
     fetchOrders();
   } catch (error) {
     console.error('取消订单失败:', error);
-    alert('取消订单失败');
+    toast.error('取消订单失败');
   }
 };
 
 const confirmDelivery = async (orderId) => {
-  if (!confirm('确认已收到商品吗？确认后款项将转给卖家。')) {
+  const result = await Swal.fire({
+    title: '确认已收到商品吗？',
+    text: "确认后款项将转给卖家。",
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonColor: '#28a745',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: '确认收货',
+    cancelButtonText: '取消'
+  });
+
+  if (!result.isConfirmed) {
     return;
   }
 
   try {
     await axios.post(`/api/orders/${orderId}/confirm`);
-    alert('确认收货成功！款项已转给卖家。');
+    toast.success('确认收货成功！款项已转给卖家。');
     fetchOrders();
   } catch (error) {
     console.error('确认收货失败:', error);
     const errorMessage = error.response?.data?.message || error.response?.data || '确认收货失败，请重试';
-    alert('确认收货失败：' + errorMessage);
+    toast.error('确认收货失败：' + errorMessage);
   }
 };
 

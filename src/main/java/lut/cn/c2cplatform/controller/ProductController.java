@@ -12,14 +12,23 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import lut.cn.c2cplatform.service.SearchService;
+import lut.cn.c2cplatform.dto.SearchRequestDTO;
+import lut.cn.c2cplatform.document.ProductDocument;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
+import java.util.Map;
+import java.util.ArrayList;
+import java.util.stream.Collectors;
+import java.util.function.Function;
 
 @RestController
 @RequestMapping("/api/products")
 public class ProductController {
     @Autowired
     private ProductService productService;
+    @Autowired
+    private SearchService searchService;
     @Autowired
     private ObjectMapper objectMapper;
 
@@ -82,18 +91,62 @@ public class ProductController {
             @RequestParam(required = false) String location,
             @RequestParam(required = false) String categories) {
         try {
-            List<Product> products;
-            // 如果有任何筛选参数，使用筛选查询
-            if (keyword != null || minPrice != null || maxPrice != null ||
-                    conditionLevel != null || location != null || categories != null) {
-                products = productService.listProductsWithFilters(keyword, minPrice, maxPrice,
-                        conditionLevel, location, categories);
+            List<ProductDTO> productDTOs;
+
+            // 只有当有关键词时才使用Elasticsearch（为了高亮）
+            if (keyword != null && !keyword.trim().isEmpty()) {
+
+                SearchRequestDTO searchRequest = new SearchRequestDTO();
+                searchRequest.setKeyword(keyword);
+                searchRequest.setMinPrice(minPrice);
+                searchRequest.setMaxPrice(maxPrice);
+                searchRequest.setConditionLevel(conditionLevel);
+                searchRequest.setLocation(location);
+                searchRequest.setCategory(categories); // TODO: Add category support to
+                // SearchService
+                searchRequest.setPage(0);
+                searchRequest.setSize(100);
+
+                List<ProductDocument> searchResults = searchService.searchProducts(searchRequest);
+
+                if (searchResults.isEmpty()) {
+                    return ResponseEntity.ok(new ArrayList<>());
+                }
+
+                // Extract IDs
+                List<Long> productIds = searchResults.stream()
+                        .map(ProductDocument::getProductId)
+                        .collect(Collectors.toList());
+
+                List<Product> products = new ArrayList<>();
+                for (Long id : productIds) {
+                    Product p = productService.getProductById(id);
+                    if (p != null) {
+                        products.add(p);
+                    }
+                }
+
+                productDTOs = productService.convertToDTOList(products);
+
+                // Overlay highlighting
+                Map<Long, ProductDocument> docMap = searchResults.stream()
+                        .collect(Collectors.toMap(ProductDocument::getProductId, Function.identity()));
+
+                for (ProductDTO dto : productDTOs) {
+                    ProductDocument doc = docMap.get(dto.getId());
+                    if (doc != null) {
+                        dto.setHighlightedName(doc.getHighlightedName());
+                        dto.setHighlightedDescription(doc.getHighlightedDescription());
+                    }
+                }
+
             } else {
-                products = productService.listAllProducts();
+                // 没有关键词时，使用数据库查询（支持所有筛选条件）
+                List<Product> products = productService.listProductsWithFilters(keyword, minPrice, maxPrice,
+                        conditionLevel, location, categories);
+                productDTOs = productService.convertToDTOList(products);
             }
-            List<ProductDTO> productDTOs = productService.convertToDTOList(products);
-            // 随机打乱顺序，增加新鲜感
-            java.util.Collections.shuffle(productDTOs);
+
             return ResponseEntity.ok(productDTOs);
         } catch (Exception e) {
             // 不暴露详细错误信息给前端，只记录日志
@@ -216,4 +269,5 @@ public class ProductController {
         }
         return null;
     }
+
 }

@@ -228,19 +228,26 @@ const closeAvatarDialog = () => {
   avatarUrlInput.value = '';
 };
 
+import toast from '@/utils/toast';
+import Swal from 'sweetalert2';
+
+// ... imports
+
+// ...
+
 const handleAvatarUpload = async (event) => {
   const file = event.target.files[0];
   if (!file) return;
 
   // 验证文件类型
   if (!file.type.startsWith('image/')) {
-    alert('请选择图片文件');
+    toast.warning('请选择图片文件');
     return;
   }
 
   // 验证文件大小 (5MB)
   if (file.size > 5 * 1024 * 1024) {
-    alert('图片大小不能超过5MB');
+    toast.warning('图片大小不能超过5MB');
     return;
   }
 
@@ -256,18 +263,18 @@ const handleAvatarUpload = async (event) => {
 
     if (response.data.avatarUrl) {
       authStore.updateUser({ avatarUrl: response.data.avatarUrl });
-      alert('头像上传成功！');
+      toast.success('头像上传成功！');
       closeAvatarDialog();
     }
   } catch (error) {
     console.error('上传头像失败:', error);
-    alert(error.response?.data || '上传失败，请重试');
+    toast.error(error.response?.data || '上传失败，请重试');
   }
 };
 
 const setAvatarByUrl = async () => {
   if (!avatarUrlInput.value.trim()) {
-    alert('请输入图片URL');
+    toast.warning('请输入图片URL');
     return;
   }
 
@@ -278,26 +285,36 @@ const setAvatarByUrl = async () => {
 
     if (response.data.avatarUrl) {
       authStore.updateUser({ avatarUrl: response.data.avatarUrl });
-      alert('头像设置成功！');
+      toast.success('头像设置成功！');
       closeAvatarDialog();
     }
   } catch (error) {
     console.error('设置头像失败:', error);
-    alert(error.response?.data || '设置失败，请重试');
+    toast.error(error.response?.data || '设置失败，请重试');
   }
 };
 
 const resetToDefaultAvatar = async () => {
-  if (!confirm('确定要恢复默认头像吗？')) return;
+  const result = await Swal.fire({
+    title: '确定要恢复默认头像吗？',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#3085d6',
+    cancelButtonColor: '#d33',
+    confirmButtonText: '确定',
+    cancelButtonText: '取消'
+  });
+
+  if (!result.isConfirmed) return;
 
   try {
     await axios.post('/api/users/avatar/reset');
     authStore.updateUser({ avatarUrl: null });
-    alert('已恢复默认头像');
+    toast.success('已恢复默认头像');
     closeAvatarDialog();
   } catch (error) {
     console.error('重置头像失败:', error);
-    alert(error.response?.data || '重置失败，请重试');
+    toast.error(error.response?.data || '重置失败，请重试');
   }
 };
 
@@ -322,12 +339,12 @@ const updateDisplayName = async () => {
   const trimmedName = newDisplayName.value.trim();
 
   if (!trimmedName) {
-    alert('用户名不能为空');
+    toast.warning('用户名不能为空');
     return;
   }
 
   if (trimmedName.length < 2 || trimmedName.length > 20) {
-    alert('用户名长度必须在2-20个字符之间');
+    toast.warning('用户名长度必须在2-20个字符之间');
     return;
   }
 
@@ -340,13 +357,13 @@ const updateDisplayName = async () => {
 
     if (response.data.displayName) {
       authStore.updateUser({ displayName: response.data.displayName });
-      alert('用户名修改成功！');
+      toast.success('用户名修改成功！');
       closeDisplayNameDialog();
     }
   } catch (error) {
     console.error('修改用户名失败:', error);
     const errorMsg = error.response?.data?.message || error.response?.data || '修改失败，请重试';
-    alert(errorMsg);
+    toast.error(errorMsg);
   } finally {
     isUpdatingName.value = false;
   }
@@ -414,15 +431,29 @@ const checkUnreadSystemMessages = async () => {
     // 只显示未读的系统消息
     const unreadSystemMessages = response.data.filter(msg => !msg.isRead && msg.isSystemMessage);
 
-    // 为每条未读系统消息显示通知
-    unreadSystemMessages.forEach((msg, index) => {
+    // 从 localStorage 获取已显示过的消息 ID 列表
+    const displayedMessagesKey = `displayed_system_messages_${authStore.user?.username || 'guest'}`;
+    const displayedMessageIds = JSON.parse(localStorage.getItem(displayedMessagesKey) || '[]');
+    
+    // 过滤出尚未显示过的消息（使用 timestamp + content 作为唯一标识）
+    const newMessages = unreadSystemMessages.filter(msg => {
+      const msgId = `${msg.timestamp}_${msg.content.substring(0, 50)}`; // 使用时间戳和内容前50字符作为唯一标识
+      return !displayedMessageIds.includes(msgId);
+    });
+
+    // 为每条新消息显示通知
+    newMessages.forEach((msg, index) => {
       setTimeout(() => {
         addSystemNotification(msg.content);
+        // 记录已显示的消息唯一标识
+        const msgId = `${msg.timestamp}_${msg.content.substring(0, 50)}`;
+        displayedMessageIds.push(msgId);
+        localStorage.setItem(displayedMessagesKey, JSON.stringify(displayedMessageIds));
       }, index * 500); // 每条消息间隔500ms显示，避免重叠
     });
 
-    if (unreadSystemMessages.length > 0) {
-      console.log(`[App] 显示 ${unreadSystemMessages.length} 条未读系统消息`);
+    if (newMessages.length > 0) {
+      console.log(`[App] 显示 ${newMessages.length} 条新的未读系统消息`);
     }
   } catch (error) {
     console.error('[App] 检查未读系统消息失败:', error);

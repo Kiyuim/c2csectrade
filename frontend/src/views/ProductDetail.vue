@@ -181,7 +181,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getCategoryLabel } from '@/utils/categoryData';
 import { useAuthStore } from '@/store/auth';
@@ -192,6 +192,7 @@ import RecommendationSection from '@/components/RecommendationSection.vue';
 import ReportModal from '@/components/ReportModal.vue';
 import ProductReviews from '@/components/ProductReviews.vue';
 import CreditScoreCard from '@/components/CreditScoreCard.vue';
+import Swal from 'sweetalert2';
 
 const route = useRoute();
 const router = useRouter();
@@ -415,7 +416,18 @@ const buyNow = async () => {
     const checkResponse = await axios.get('/api/orders/check-pending');
     if (checkResponse.data.hasPendingOrder) {
       const orderId = checkResponse.data.orderId;
-      if (confirm('您有未完成的订单，是否前往支付？')) {
+      const result = await Swal.fire({
+        title: '您有未完成的订单',
+        text: "是否前往支付？",
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: '去支付',
+        cancelButtonText: '取消'
+      });
+
+      if (result.isConfirmed) {
         router.push(`/payment/${orderId}`);
       }
       return;
@@ -475,7 +487,18 @@ const startBargain = async () => {
 
 // 删除商品
 const deleteProduct = async () => {
-  if (!confirm('确定要删除这个商品吗？此操作不可恢复。')) {
+  const result = await Swal.fire({
+    title: '确定要删除这个商品吗？',
+    text: "此操作不可恢复。",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: '删除',
+    cancelButtonText: '取消'
+  });
+
+  if (!result.isConfirmed) {
     return;
   }
 
@@ -532,6 +555,20 @@ onMounted(() => {
   window.addEventListener('keydown', handleKeydown);
 });
 
+
+// 监听路由参数变化，重新加载数据
+watch(
+  () => route.params.id,
+  (newId) => {
+    if (newId) {
+      fetchProduct();
+      trackProductView();
+      fetchSimilarProducts();
+      // 滚动到顶部
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+);
 
 // 清理事件监听器
 onUnmounted(() => {

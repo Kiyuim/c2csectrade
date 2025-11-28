@@ -8,29 +8,72 @@ public class SearchRequestDTO {
     private BigDecimal maxPrice;
     private Integer conditionLevel;
     private String location;
+    private String category;
     private Integer page = 0;
     private Integer size = 20;
 
     // Getters and Setters
-    public String getKeyword() { return keyword; }
-    public void setKeyword(String keyword) { this.keyword = keyword; }
+    public String getKeyword() {
+        return keyword;
+    }
 
-    public BigDecimal getMinPrice() { return minPrice; }
-    public void setMinPrice(BigDecimal minPrice) { this.minPrice = minPrice; }
+    public void setKeyword(String keyword) {
+        this.keyword = keyword;
+    }
 
-    public BigDecimal getMaxPrice() { return maxPrice; }
-    public void setMaxPrice(BigDecimal maxPrice) { this.maxPrice = maxPrice; }
+    public BigDecimal getMinPrice() {
+        return minPrice;
+    }
 
-    public Integer getConditionLevel() { return conditionLevel; }
-    public void setConditionLevel(Integer conditionLevel) { this.conditionLevel = conditionLevel; }
+    public void setMinPrice(BigDecimal minPrice) {
+        this.minPrice = minPrice;
+    }
 
-    public String getLocation() { return location; }
-    public void setLocation(String location) { this.location = location; }
+    public BigDecimal getMaxPrice() {
+        return maxPrice;
+    }
 
-    public Integer getPage() { return page; }
-    public void setPage(Integer page) { this.page = page; }
+    public void setMaxPrice(BigDecimal maxPrice) {
+        this.maxPrice = maxPrice;
+    }
 
-    public Integer getSize() { return size; }
-    public void setSize(Integer size) { this.size = size; }
+    public Integer getConditionLevel() {
+        return conditionLevel;
+    }
+
+    public void setConditionLevel(Integer conditionLevel) {
+        this.conditionLevel = conditionLevel;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+    }
+
+    public Integer getPage() {
+        return page;
+    }
+
+    public void setPage(Integer page) {
+        this.page = page;
+    }
+
+    public Integer getSize() {
+        return size;
+    }
+
+    public void setSize(Integer size) {
+        this.size = size;
+    }
 }
-

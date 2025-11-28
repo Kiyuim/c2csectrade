@@ -127,7 +127,7 @@
           <div v-else class="no-image">暂无图片</div>
         </div>
         <div class="product-info">
-          <h3 class="product-name">{{ product.name }}</h3>
+          <h3 class="product-name" v-html="product.highlightedName || product.name"></h3>
           <div class="product-price">¥{{ product.price }}</div>
           <div class="product-meta">
             <span v-if="product.conditionLevel">{{ product.conditionLevel }}成新</span>
@@ -465,13 +465,15 @@ const onAvatarError = (e, name) => {
   e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=007bff&color=fff&size=40`;
 };
 
+import toast from '@/utils/toast';
+
 const getSellerName = (product) => {
   return product.displayName || product.username || product.user?.displayName || product.user?.username || `用户${product.userId}`;
 };
 
 const startChat = (product) => {
   if (!isLoggedIn.value) {
-    alert('请先登录再与卖家私聊');
+    toast.warning('请先登录再与卖家私聊');
     router.push('/login');
     return;
   }
@@ -480,7 +482,7 @@ const startChat = (product) => {
   const isAdmin = authStore.user?.role === 'ROLE_ADMIN';
 
   if (!isAdmin && currentUserId === product.userId) {
-    alert('不能与自己私聊');
+    toast.warning('不能与自己私聊');
     return;
   }
 
@@ -1200,5 +1202,12 @@ h1 {
     width: 100%;
     justify-content: center;
   }
+}
+:deep(.highlight) {
+  color: #e74c3c;
+  font-weight: bold;
+  background-color: rgba(231, 76, 60, 0.1);
+  padding: 0 4px;
+  border-radius: 4px;
 }
 </style>

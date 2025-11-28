@@ -89,6 +89,7 @@
 
 <script>
 import axios from 'axios';
+import toast from '@/utils/toast';
 
 export default {
   name: 'ReviewView',
@@ -117,7 +118,7 @@ export default {
       const remainingSlots = 5 - this.reviewImages.length;
 
       if (files.length > remainingSlots) {
-        alert(`最多只能上传${remainingSlots}张图片`);
+        toast.warning(`最多只能上传${remainingSlots}张图片`);
         return;
       }
 
@@ -128,7 +129,7 @@ export default {
         for (const file of files) {
           // 验证文件大小（限制5MB）
           if (file.size > 5 * 1024 * 1024) {
-            alert(`图片 ${file.name} 超过5MB，请选择更小的图片`);
+            toast.warning(`图片 ${file.name} 超过5MB，请选择更小的图片`);
             continue;
           }
 
@@ -149,7 +150,7 @@ export default {
         }
       } catch (error) {
         console.error('上传图片失败:', error);
-        alert('上传图片失败，请重试');
+        toast.error('上传图片失败，请重试');
       } finally {
         this.uploading = false;
         // 清空input，允许重复选择相同文件
@@ -163,7 +164,7 @@ export default {
 
     async submitReview() {
       if (this.productRating === 0 || this.sellerRating === 0) {
-        alert('请为商品和卖家评分');
+        toast.warning('请为商品和卖家评分');
         return;
       }
 
@@ -188,14 +189,14 @@ export default {
         );
 
         if (response.data.success) {
-          alert('评价成功！');
+          toast.success('评价成功！');
           this.$router.push('/orders');
         } else {
-          alert(response.data.message || '评价失败');
+          toast.error(response.data.message || '评价失败');
         }
       } catch (error) {
         console.error('提交评价失败:', error);
-        alert(error.response?.data?.message || '评价失败，请重试');
+        toast.error(error.response?.data?.message || '评价失败，请重试');
       } finally {
         this.submitting = false;
       }

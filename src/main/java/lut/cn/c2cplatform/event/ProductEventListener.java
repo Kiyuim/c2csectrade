@@ -21,5 +21,24 @@ public class ProductEventListener {
             System.err.println("Failed to index product to Elasticsearch: " + e.getMessage());
         }
     }
-}
 
+    @Async
+    @EventListener
+    public void handleProductUpdated(ProductUpdatedEvent event) {
+        try {
+            searchService.indexProduct(event.getProduct());
+        } catch (Exception e) {
+            System.err.println("Failed to update product in Elasticsearch: " + e.getMessage());
+        }
+    }
+
+    @Async
+    @EventListener
+    public void handleProductDeleted(ProductDeletedEvent event) {
+        try {
+            searchService.deleteProduct(event.getProductId());
+        } catch (Exception e) {
+            System.err.println("Failed to delete product from Elasticsearch: " + e.getMessage());
+        }
+    }
+}

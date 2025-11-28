@@ -174,7 +174,8 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
-import { toast } from '@/services/toast';
+import toast from '@/utils/toast';
+import Swal from 'sweetalert2';
 import { provinces, cities } from '@/utils/locationData';
 import { getSubCategories, categories } from '@/utils/categoryData';
 
@@ -224,7 +225,7 @@ const fetchMyProducts = async () => {
     const response = await axios.get('/api/products/my-products');
     products.value = response.data;
   } catch (error) {
-    toast('加载商品失败，请稍后重试', 'error');
+    toast.error('加载商品失败，请稍后重试');
   } finally {
     loading.value = false;
   }
@@ -294,7 +295,7 @@ const handleFileChange = (event) => {
   // 验证单个文件大小
   for (const file of files) {
     if (file.size > 10 * 1024 * 1024) {
-      toast(`文件 ${file.name} 超过10MB，请选择较小的文件`, 'error');
+      toast.error(`文件 ${file.name} 超过10MB，请选择较小的文件`);
       event.target.value = '';
       return;
     }
@@ -323,7 +324,7 @@ const removeExistingMedia = (index) => {
     deletedMediaIds.value.push(media.id);
   }
   existingMedia.value.splice(index, 1);
-  toast('已标记删除，保存后生效', 'info');
+  toast.info('已标记删除，保存后生效');
 };
 
 const removeNewMedia = (index) => {
@@ -334,14 +335,12 @@ const removeNewMedia = (index) => {
 const saveEdit = async () => {
   // 优先检查商品分类，使用更明显的提示
   if (!editForm.value.category) {
-    alert('⚠️ 请先选择商品分类！\n\n商品分类是必填项，请在"主分类"中选择一个大类，然后在"子分类"中选择具体分类。');
-    toast('❌ 请选择商品分类', 'error');
+    toast.error('请选择商品分类');
     return;
   }
 
   if (!editForm.value.name || !editForm.value.price) {
-    alert('⚠️ 请填写完整信息！\n\n商品名称和价格是必填项。');
-    toast('❌ 请填写完整信息', 'error');
+    toast.error('请填写完整信息');
     return;
   }
 
@@ -369,7 +368,7 @@ const saveEdit = async () => {
       }
     });
 
-    toast('✅ 商品更新成功', 'success');
+    toast.success('商品更新成功');
     closeEditDialog();
     fetchMyProducts();
   } catch (error) {
@@ -381,19 +380,19 @@ const saveEdit = async () => {
     let errorMsg = '';
 
     if (status === 400) {
-      errorMsg = '❌ 请检查商品信息是否完整正确';
+      errorMsg = '请检查商品信息是否完整正确';
     } else if (status === 401 || status === 403) {
-      errorMsg = '❌ 您没有权限修改此商品';
+      errorMsg = '您没有权限修改此商品';
     } else if (status === 404) {
-      errorMsg = '❌ 商品不存在或已被删除';
+      errorMsg = '商品不存在或已被删除';
     } else if (status === 500) {
-      errorMsg = '❌ 服务器错误，请稍后重试';
+      errorMsg = '服务器错误，请稍后重试';
     } else if (typeof errorData === 'string' && errorData && !errorData.includes('status code')) {
-      errorMsg = '❌ ' + errorData;
+      errorMsg = errorData;
     } else {
-      errorMsg = '❌ 修改失败，请稍后重试';
+      errorMsg = '修改失败，请稍后重试';
     }
-    toast(errorMsg, 'error');
+    toast.error(errorMsg);
   } finally {
     saving.value = false;
   }
@@ -409,17 +408,28 @@ const closeEditDialog = () => {
 };
 
 const deleteProduct = async (id) => {
-  if (!confirm('确定要删除这个商品吗？此操作不可恢复。')) {
+  const result = await Swal.fire({
+    title: '确定要删除这个商品吗？',
+    text: "此操作不可恢复。",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: '删除',
+    cancelButtonText: '取消'
+  });
+
+  if (!result.isConfirmed) {
     return;
   }
 
   try {
     await axios.delete(`/api/products/${id}`);
-    toast('商品删除成功', 'success');
+    toast.success('商品删除成功');
     fetchMyProducts();
   } catch (error) {
     console.error('删除商品失败:', error);
-    toast('删除失败', 'error');
+    toast.error('删除失败');
   }
 };
 

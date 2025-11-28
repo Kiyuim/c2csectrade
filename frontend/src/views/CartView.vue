@@ -102,6 +102,8 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
+import toast from '@/utils/toast';
+import Swal from 'sweetalert2';
 
 const router = useRouter();
 const cartItems = ref([]);
@@ -131,7 +133,7 @@ const fetchCartItems = async () => {
     }));
   } catch (error) {
     console.error('获取购物车失败:', error);
-    alert('获取购物车失败');
+    toast.error('获取购物车失败');
   } finally {
     loading.value = false;
   }
@@ -156,7 +158,7 @@ const updateQuantity = async (item) => {
     });
   } catch (error) {
     console.error('更新数量失败:', error);
-    alert('更新数量失败');
+    toast.error('更新数量失败');
     await fetchCartItems();
   }
 };
@@ -166,7 +168,7 @@ const increaseQuantity = async (item) => {
     item.quantity++;
     await updateQuantity(item);
   } else {
-    alert('已达到库存上限');
+    toast.warning('已达到库存上限');
   }
 };
 
@@ -178,17 +180,27 @@ const decreaseQuantity = async (item) => {
 };
 
 const removeItem = async (item) => {
-  if (!confirm('确定要移除该商品吗？')) {
+  const result = await Swal.fire({
+    title: '确定要移除该商品吗？',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: '移除',
+    cancelButtonText: '取消'
+  });
+
+  if (!result.isConfirmed) {
     return;
   }
 
   try {
     await axios.delete(`/api/cart/remove/${item.product.id}`);
     cartItems.value = cartItems.value.filter(i => i.cartItemId !== item.cartItemId);
-    alert('已从购物车移除');
+    toast.success('已从购物车移除');
   } catch (error) {
     console.error('删除失败:', error);
-    alert('删除失败');
+    toast.error('删除失败');
   }
 };
 
@@ -208,7 +220,7 @@ const checkout = async () => {
   const selectedItems = cartItems.value.filter(item => item.selected);
 
   if (selectedItems.length === 0) {
-    alert('请选择要结算的商品');
+    toast.warning('请选择要结算的商品');
     return;
   }
 
@@ -217,7 +229,18 @@ const checkout = async () => {
     const checkResponse = await axios.get('/api/orders/check-pending');
     if (checkResponse.data.hasPendingOrder) {
       const orderId = checkResponse.data.orderId;
-      if (confirm('您有未完成的订单，是否前往支付？')) {
+      const result = await Swal.fire({
+        title: '您有未完成的订单',
+        text: "是否前往支付？",
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: '前往支付',
+        cancelButtonText: '取消'
+      });
+
+      if (result.isConfirmed) {
         router.push(`/payment/${orderId}`);
       }
       return;
@@ -230,16 +253,16 @@ const checkout = async () => {
     });
     const order = response.data;
 
-    alert('订单创建成功');
+    toast.success('订单创建成功');
 
     // 跳转到支付页面（使用路径参数）
     router.push(`/payment/${order.id}`);
   } catch (error) {
     console.error('结算失败:', error);
     if (error.response?.data?.message) {
-      alert(error.response.data.message);
+      toast.error(error.response.data.message);
     } else {
-      alert('结算失败，请重试');
+      toast.error('结算失败，请重试');
     }
   }
 };
